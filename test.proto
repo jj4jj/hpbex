@@ -1,0 +1,50 @@
+
+//option(cc_enable_arenas) = true;
+import "google/protobuf/descriptor.proto";
+extend google.protobuf.MessageOptions {
+    optional string pks = 50000;
+    optional string divkey = 50001;
+    optional uint32 divnum = 50002;
+    optional string mcn = 50003;
+    optional string mdesc = 50004;
+    optional string relchk = 50005;
+}
+extend google.protobuf.FieldOptions {
+    optional string  cn = 50000;
+    optional string  desc = 50001;
+    optional string  count = 50002;
+    optional string  length = 50003;
+}
+extend google.protobuf.EnumValueOptions {
+    optional string ecn = 50000;
+    optional string edesc = 50001;
+}
+//////////////////////////////////////////////////
+message HelloA {
+    optional int32 f1 = 1;
+}
+message HelloB {
+    optional int32 f1 = 1;
+    optional HelloA     a = 2;
+}
+message HelloC {
+    optional int32 f1 = 1;
+    optional HelloB b = 2;
+}
+message HelloD {
+    optional int32 f1 = 1;
+    optional HelloB b = 2;
+    optional HelloC c = 3;
+}
+message Hello {
+    option(mcn)="ssss";
+    option(mdesc)="hello, world";
+    option(pks)="id";
+    option(relchk)="";
+
+    optional int32 id = 1[(cn)="id",(desc)="id"];
+    repeated string myworld = 2[(length)="32",(count)="32"];
+    repeated int32 roleids = 3[(count)="32"];
+    optional HelloD d = 4;
+    repeated HelloD rd = 5[(count)="32"];
+}
