@@ -307,6 +307,7 @@ struct STMessageMeta {
 			}
 			bpos = fpos + 1;
 		}
+		return 0;
 	}
 };
 
@@ -663,7 +664,8 @@ public:
 			//--coutnt
 			WRITE_LINE("memmove(%s.list + idx_, %s.list + %s.count, (%s.count - idx_)*sizeof(%s.list[0]));",
 				sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
-				sfm.GetVarName().c_str(), sfm.GetVarName().c_str());
+				sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+				sfm.GetVarName().c_str());
 			--level;
 			WRITE_LINE("}");
 			WRITE_LINE("else {");
