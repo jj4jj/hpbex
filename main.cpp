@@ -9,9 +9,12 @@
 #include <vector>
 #include <sstream>
 #include <string>
+#include <exception>
+#include <stdexcept>
 
 using namespace std;
 
+std::stringstream error_stream;
 using namespace google::protobuf;
 struct MFEC : compiler::MultiFileErrorCollector {
 	void AddError(
@@ -20,7 +23,7 @@ struct MFEC : compiler::MultiFileErrorCollector {
 				int column,
 				const string & message)
 	{
-		cerr << "file name:" << filename << ":" << line << " error:" << message << endl;
+		error_stream << "file name:" << filename << ":" << line << " error:" << message << endl;
 	}
 };
 
@@ -76,7 +79,7 @@ int GetDescOption(string & value, D desc, const string & option){
 		}
 	}
 	if (!tag){
-		clog << "not found the option->tag map option:"<<option.c_str() << " in desc:" << desc->name() << endl;
+		error_stream << "not found the option->tag map option:" << option.c_str() << " in desc:" << desc->name() << endl;
 		return -1;
 	}
 	auto options = desc->options();
@@ -84,11 +87,11 @@ int GetDescOption(string & value, D desc, const string & option){
 		auto ouf = options.unknown_fields().field(j);
 		if (ouf.number() == tag){ //cn
 			value = ouf.length_delimited();
-			clog << "found the option:" << option.c_str() << " tag:" << tag << " value:"<< value << " in desc:" << desc->name() << endl;
+			//clog << "found the option:" << option.c_str() << " tag:" << tag << " value:"<< value << " in desc:" << desc->name() << endl;
 			return 0;
 		}
 	}
-	clog << "not found the option:" << option.c_str() << " tag:" << tag << " in desc:" << desc->name() << endl;
+	error_stream << "not found the option:" << option.c_str() << " tag:" << tag << " in desc:" << desc->name() << endl;
 	return -2;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -114,13 +117,13 @@ struct STFieldMeta {
 		if (fd->is_repeated()){
 			//cout > 0
 			if (GetDescOption(count, fd, "count")){
-				clog << "the field:" << fd->name() << " in message:" << fd->type_name() << " is a repeat , but not found options [count] !" << endl;
+				error_stream << "the field:" << fd->name() << " in message:" << fd->type_name() << " is a repeat , but not found options [count] !" << endl;
 				return -1;
 			}
 		}
 		if (fd->cpp_type() == FieldDescriptor::CPPTYPE_STRING){
 			if (GetDescOption(length, fd, "length")){
-				clog << "the field:" << fd->name() << " in message:" << fd->type_name() << " is a string , but not found options [length] !" << endl;
+				error_stream << "the field:" << fd->name() << " in message:" << fd->type_name() << " is a string , but not found options [length] !" << endl;
 				return -2;
 			}
 		}
@@ -237,7 +240,7 @@ struct STFieldMeta {
 			}
 			else {
 				meth = st_var_name;
-				meth += "=";
+				meth += " = ";
 				meth += convtomsg_;
 				meth += ".";
 				meth += msg_var_name;
@@ -265,7 +268,6 @@ struct STMessageMeta {
 		GET_DESC_OPTION(divkey);
 		GET_DESC_OPTION(divnum);
 		GET_DESC_OPTION(mcn);
-		GET_DESC_OPTION(mcn);
 		GET_DESC_OPTION(mdesc);
 		GET_DESC_OPTION(relchk);
 
@@ -283,9 +285,6 @@ struct STMessageMeta {
 		}
 	}
 	int		ParsePKS(){
-		if (pks.empty()){
-			return 0;
-		}
 		string::size_type bpos = 0, fpos = 0;
 		while (true && !pks.empty()){
 			fpos = pks.find(',', bpos);
@@ -294,18 +293,25 @@ struct STMessageMeta {
 				f_field_name = pks.substr(bpos, fpos - bpos);
 			}
 			else {
-				if (fpos > bpos){
+				if (fpos != bpos){
 					f_field_name = pks.substr(bpos);
 				}
-				break;
-			}
-			//push back
+			}		
 			for (auto & suf : sub_fields){
 				if (suf.field_desc->name() == f_field_name){
 					pks_fields.push_back(&suf);
 				}
 			}
+			if (fpos == string::npos){
+				break;
+			}
 			bpos = fpos + 1;
+		}
+		//all fields
+		if (pks_fields.empty()){
+			for (auto & suf : sub_fields){
+				pks_fields.push_back(&suf);
+			}
 		}
 		return 0;
 	}
@@ -344,7 +350,7 @@ public:
 			snprintf(sz_line_buffer, sizeof(sz_line_buffer), format, ##__VA_ARGS__); \
 			ss << GenerateCXXFlat::repeat(indent, level) << sz_line_buffer; \
 				}while (false)		
-
+		////////////////////////////////////////////////////////////////////////////////////
 		//struct Msg {
 		WRITE_LINE("struct %s {", STMetaUtil::GetStructName(desc).c_str());
 		level++;
@@ -352,8 +358,7 @@ public:
 
 		STMessageMeta	msg_meta;
 		if (msg_meta.ParseFrom(desc)){
-			exit(-1);
-			return "";
+			throw logic_error("parse error !");
 		}
 
 		for (auto & sfm : msg_meta.sub_fields){
@@ -367,7 +372,7 @@ public:
 			fieldmeta_list.push_back(sfm);
 		}
 		///////////////////////////////////////////////////////////////////////////
-		WRITE_LINE("");
+		WRITE_LINE("\t");
 		WRITE_LINE("//////////////member functions///////////////////////////////////");
 		//construct
 		WRITE_LINE("void\t\tconstruct() {bzero(this,sizeof(*this);}");
@@ -381,7 +386,7 @@ public:
 			if (sfm.field_desc->is_repeated()){
 				WRITE_LINE("assert(%s.count <= %s);//assertion", st_var_name.c_str(), sfm.count.c_str());
 				//for(size_t i = 0;i < a.count; ++i)
-				WRITE_LINE("for(size_t i = 0; i < %s.count &&  && i < %s; ++i){", st_var_name.c_str(), sfm.count.c_str());
+				WRITE_LINE("for ( size_t i = 0; i < %s.count &&  && i < %s; ++i){", st_var_name.c_str(), sfm.count.c_str());
 				st_var_name += ".list[i]";
 				++level;
 			}
@@ -404,8 +409,8 @@ public:
 			if (sfm.field_desc->is_repeated()){
 				WRITE_LINE("assert(convfrommsg_.%s_size() <= %s);//assertion", msg_var_name.c_str(), sfm.count.c_str());
 				//for(size_t i = 0;i < a.count; ++i)
-				WRITE_LINE("%s.count=0;", sfm.GetVarName().c_str());
-				WRITE_LINE("for(int i = 0;i < convfrommsg_.%s_size() && i < %s ; ++i){", msg_var_name.c_str(), sfm.count.c_str());
+				WRITE_LINE("%s.count = 0;", sfm.GetVarName().c_str());
+				WRITE_LINE("for ( int i = 0; i < convfrommsg_.%s_size() && i < %s; ++i){", msg_var_name.c_str(), sfm.count.c_str());
 				st_var_name += ".list[i]";
 				msg_var_name += "(i)";
 				++level;
@@ -423,56 +428,97 @@ public:
 		//bool operator ==  //for find
 		WRITE_LINE("bool\t\toperator == (const %s & rhs_) {", STMetaUtil::GetStructName(desc).c_str());
 		++level;
-		WRITE_LINE("return true &&");
-		++level;
-		for (auto & sfm_it : msg_meta.pks_fields){
-			auto & sfm = *sfm_it;
-			if (sfm.field_desc->type() == FieldDescriptor::TYPE_FLOAT ||
-				sfm.field_desc->type() == FieldDescriptor::TYPE_DOUBLE){
-				WRITE_LINE("fabs(%s - rhs_.%s) < 10e-6 &&",
-					sfm.GetVarName().c_str(), sfm.GetVarName().c_str());
+		for (size_t i = 0; i < msg_meta.pks_fields.size(); ++i){
+			string pred_prefix = "";
+			string pred_postfix = "";
+			if (i == 0){
+				pred_prefix = "return";
 			}
-			else if (sfm.field_desc->type() == FieldDescriptor::TYPE_STRING){					
-				WRITE_LINE("strncmp(%s.data, rhs.%s.data, %s) == 0 &&", 
-					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.length.c_str());
-			}
-			else if (sfm.field_desc->type() == FieldDescriptor::TYPE_BYTES){
-				WRITE_LINE("%s.length == rhs_.%s.length && memcmp(%s.data, rhs_.%s.data, %s.length) == 0 &&",
-					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
-					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.GetVarName().c_str());
+			if (i + 1 == msg_meta.pks_fields.size()){
+				pred_postfix = ";";
 			}
 			else {
-				WRITE_LINE("%s == rhs_.%s &&", sfm.GetVarName().c_str(), sfm.GetVarName().c_str());
+				pred_postfix = "&&";
+			}
+			auto & sfm = *msg_meta.pks_fields[i];
+			if (sfm.field_desc->type() == FieldDescriptor::TYPE_FLOAT ||
+				sfm.field_desc->type() == FieldDescriptor::TYPE_DOUBLE){
+				WRITE_LINE("%s (fabs(%s - rhs_.%s) < 10e-6) %s",
+					pred_prefix.c_str(),
+					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+					pred_postfix.c_str());
+			}
+			else if (sfm.field_desc->type() == FieldDescriptor::TYPE_STRING){					
+				WRITE_LINE("%s (strncmp(%s.data, rhs.%s.data, %s) == 0) %s", 
+					pred_prefix.c_str(),
+					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+					sfm.length.c_str(),pred_postfix.c_str());
+			}
+			else if (sfm.field_desc->type() == FieldDescriptor::TYPE_BYTES){
+				WRITE_LINE("%s (%s.length == rhs_.%s.length && memcmp(%s.data, rhs_.%s.data, %s.length) == 0) %s",
+					pred_prefix.c_str(),
+					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+					sfm.GetVarName().c_str(), pred_postfix.c_str());
+			}
+			else {
+				WRITE_LINE("%s (%s == rhs_.%s) %s",
+					pred_prefix.c_str(),
+					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+					pred_postfix.c_str());
+			}
+			if (i == 0){
+				++level;
+			}
+			if (i + 1 == msg_meta.pks_fields.size()){
+				--level;
 			}
 		}
-		WRITE_LINE("true;");
-		--level;
-		///////////
 		--level;
 		WRITE_LINE("}");
 
-		//bool operator <  //for less
+		//bool operator <  //for less //////////////////////////////////////////
 		WRITE_LINE("bool\t\toperator < (const %s & rhs_) {", STMetaUtil::GetStructName(desc).c_str());
 		++level;
-		WRITE_LINE("return true &&");
-		++level;
-		for (auto & sfm_it : msg_meta.pks_fields){
-			auto & sfm = *sfm_it;
-			if (sfm.field_desc->type() == FieldDescriptor::TYPE_STRING){
-				WRITE_LINE("strncmp(%s.data, rhs_.%s.data, %s) < 0 &&",
-					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.length.c_str());
+		for (size_t i = 0; i < msg_meta.pks_fields.size(); ++i){
+			string pred_prefix = "";
+			string pred_postfix = "";
+			if (i == 0){
+				pred_prefix = "return";
 			}
-			else if (sfm.field_desc->type() == FieldDescriptor::TYPE_BYTES){
-				WRITE_LINE("memcmp(%s.data, rhs_.%s.data, std::min(%s.length, rhs_.%s.length) < 0 &&",
-					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
-					sfm.GetVarName().c_str(), sfm.GetVarName().c_str());
+			if (i + 1 == msg_meta.pks_fields.size()){
+				pred_postfix = ";";
 			}
 			else {
-				WRITE_LINE("%s < rhs_.%s &&", sfm.GetVarName().c_str(), sfm.GetVarName().c_str());
+				pred_postfix = "&&";
+			}
+			auto & sfm = *msg_meta.pks_fields[i];
+			if (sfm.field_desc->type() == FieldDescriptor::TYPE_STRING){
+				WRITE_LINE("%s (strncmp(%s.data, rhs_.%s.data, %s) < 0 ) %s",
+					pred_prefix.c_str(),
+					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+					sfm.length.c_str(), pred_postfix.c_str());
+			}
+			else if (sfm.field_desc->type() == FieldDescriptor::TYPE_BYTES){
+				WRITE_LINE("%s (memcmp(%s.data, rhs_.%s.data, std::min(%s.length, rhs_.%s.length) < 0 ) %s",
+					pred_prefix.c_str(),
+					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+					pred_postfix.c_str());
+			}
+			else {
+				WRITE_LINE("%s (%s < rhs_.%s ) %s",
+					pred_prefix.c_str(),
+					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+					pred_postfix.c_str());
+			}
+			if (i == 0){
+				++level;
+			}
+			if (i + 1 == msg_meta.pks_fields.size()){
+				--level;
 			}
 		}
-		WRITE_LINE("true;");
-		--level;
 		///////////
 		--level;
 		WRITE_LINE("}");
@@ -485,14 +531,6 @@ public:
 			if (sfm.field_desc->type() == FieldDescriptor::TYPE_BYTES){
 				continue;
 			}
-			//find_idx_()
-			//append(swap, shift)
-			//remove_(idx, swap)
-
-			//lower_bound_
-			//upper_bound_
-			//remove_
-
 			//----finx_idx_------------------------------------------------------
 			if (sfm.field_desc->type() == FieldDescriptor::TYPE_STRING){
 				WRITE_LINE("int\t\tfind_idx_%s(const std::string & entry_) {",
@@ -504,12 +542,6 @@ public:
 				WRITE_LINE("[](const decltype(%s.list[0]) & t1, const std::string & t2){ return t2 > t1.data; }); ",
 					sfm.GetVarName().c_str());
 				--level;
-
-				WRITE_LINE("if ( it != %s.list + %s.count ) { return it - %s.list; }",
-					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.GetVarName().c_str());
-				WRITE_LINE("return -1;");
-				--level;
-				WRITE_LINE("}");
 			}
 			else {
 				WRITE_LINE("int\t\tfind_idx_%s(const %s & entry_) {", 
@@ -517,16 +549,12 @@ public:
 				++level;
 				WRITE_LINE("auto it = std::find(%s.list, %s.list + %s.count, entry_);",
 					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.GetVarName().c_str());
-				WRITE_LINE("if ( it == %s.list + %s.count) {", 
-					sfm.GetVarName().c_str(), sfm.GetVarName().c_str());
-				++level;
-				WRITE_LINE("return it - %s.list;", sfm.GetVarName().c_str());
-				--level;
-				WRITE_LINE("}");
-				WRITE_LINE("return -1;");
-				--level;
-				WRITE_LINE("}");
 			}
+			WRITE_LINE("if ( it != %s.list + %s.count ) { return it - %s.list; }",
+				sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.GetVarName().c_str());
+			WRITE_LINE("return -1;");
+			--level;
+			WRITE_LINE("}");
 			//-------append_ shift------------------------------------------------
 			//int	append_x(entry & v , bool shift)
 			if (sfm.field_desc->type() == FieldDescriptor::TYPE_STRING){
@@ -660,23 +688,16 @@ public:
 			WRITE_LINE("if ( idx_ >= %s.count ) { return -1; }", sfm.GetVarName().c_str());
 			WRITE_LINE("if ( shift_not_swap_ ) {");
 			++level;
-			//shift 
-			//--coutnt
-			WRITE_LINE("memmove(%s.list + idx_, %s.list + %s.count, (%s.count - idx_)*sizeof(%s.list[0]));",
-				sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+			//shift <- idx_
+			WRITE_LINE("memmove(%s.list + idx_, %s.list + idx_ + 1, (%s.count - idx_ - 1)*sizeof(%s.list[0]));",
+				sfm.GetVarName().c_str(),
 				sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
 				sfm.GetVarName().c_str());
 			--level;
 			WRITE_LINE("}");
-			WRITE_LINE("else {");
-			++level;
-			//idx<-count-1
-			//--count
-			WRITE_LINE("%s.list[idx_] = %s.list[%s.count - 1];",
+			WRITE_LINE("else { %s.list[idx_] = %s.list[%s.count - 1]; }",
 				sfm.GetVarName().c_str(),
 				sfm.GetVarName().c_str(), sfm.GetVarName().c_str());
-			--level;
-			WRITE_LINE("}");
 			WRITE_LINE("--%s.count;", sfm.GetVarName().c_str());
 			WRITE_LINE("return 0;");
 			--level;
@@ -807,8 +828,8 @@ public:
 				++it;
 			}
 			if (it == msg_degrees.end()){
-				cerr << "msg degree not found zero !" << endl;
-				exit(-1);
+				error_stream << "msg degree not found zero !" << endl;
+				throw logic_error("msg degree error !");
 			}
 			msgs.push_back(it->first);
 			for (auto desc : reverse_refer[it->first]){
@@ -816,7 +837,7 @@ public:
 					--msg_degrees[desc];
 				}
 				else {
-					cerr << "msg type:" << desc->name() << " refer count is 0 !" << endl;
+					error_stream << "msg type:" << desc->name() << " refer count is 0 !" << endl;
 				}
 			}
 			msg_degrees.erase(it);
@@ -843,12 +864,18 @@ int main(int argc, char * argv[]){
 	compiler::Importer	importer(&dst,&mfec);
 	auto ret = importer.Import(argv[1]);
 	if (!ret){
-		std::cerr << "error import !" << endl;
+		cerr << "error import !" << endl;
 		return -1;
 	}
 	auto pool = importer.pool();
 	auto desc = pool->FindMessageTypeByName(argv[2]);
 	GenerateCXXFlat gen(desc);
-	gen.print();
+	try {
+		gen.print();
+	}
+	catch (...){
+		cerr << "generate code error ! for:" << error_stream.str() << endl;
+		return -2;
+	}
 	return 0;
 }
