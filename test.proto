@@ -14,6 +14,7 @@ message HelloC {
     optional HelloB b = 2;
 }
 message HelloD {
+    option(pks)="f1";
     optional int32 f1 = 1;
     optional HelloB b = 2;
     optional HelloC c = 3;
@@ -22,8 +23,8 @@ message HelloD {
 message Hello {
     option(mcn)="ssss";
     option(mdesc)="hello, world";
-    option(pks)="id";
     option(relchk)="";
+    option(pks)="id";
 
     optional int32 id = 1[(cn)="id",(desc)="id"];
     repeated string myworld = 2[(length)="32",(count)="32"];

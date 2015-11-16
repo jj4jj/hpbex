@@ -5,3 +5,5 @@ clean:
 	rm -f hpbex
 test:
 	./hpbex test.proto Hello
+cl:
+	./hpbex test.proto Hello > test.hpb.h
