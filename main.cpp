@@ -1,6 +1,5 @@
 
 #include "google/protobuf/compiler/importer.h"
-
 #include <algorithm>
 #include <unordered_map>
 #include <unordered_set>
@@ -231,12 +230,12 @@ struct STFieldMeta {
 				meth += convtomsg_;
 				meth += ".";
 				meth += msg_var_name;
-				meth += ".data(), std::min(";
+				meth += ".data(), std::min((size_t)";
 				meth += length.c_str();
-				meth += ", ";
+				meth += ", (size_t)";
 				meth += convtomsg_;
 				meth += ".";
-				meth += msg_var_name + ".length))";
+				meth += msg_var_name + ".length()))";
 			}
 			else {
 				meth = st_var_name;
@@ -375,7 +374,7 @@ public:
 		WRITE_LINE("\t");
 		WRITE_LINE("//////////////member functions///////////////////////////////////");
 		//construct
-		WRITE_LINE("void\t\tconstruct() {bzero(this,sizeof(*this);}");
+		WRITE_LINE("void\t\tconstruct() {bzero(this,sizeof(*this));}");
 		///////////////////////////////////////////////////////////////////////////
 		//convto
 		WRITE_LINE("void\t\tconvto(%s & convtomsg_) const {", desc->name().c_str());
@@ -386,7 +385,8 @@ public:
 			if (sfm.field_desc->is_repeated()){
 				WRITE_LINE("assert(%s.count <= %s);//assertion", st_var_name.c_str(), sfm.count.c_str());
 				//for(size_t i = 0;i < a.count; ++i)
-				WRITE_LINE("for ( size_t i = 0; i < %s.count &&  && i < %s; ++i){", st_var_name.c_str(), sfm.count.c_str());
+				WRITE_LINE("for ( size_t i = 0; i < %s.count && i < (sizeof(%s.list)/sizeof(%s.list[0])); ++i){",
+					st_var_name.c_str(), st_var_name.c_str(), st_var_name.c_str());
 				st_var_name += ".list[i]";
 				++level;
 			}
@@ -410,10 +410,13 @@ public:
 				WRITE_LINE("assert(convfrommsg_.%s_size() <= %s);//assertion", msg_var_name.c_str(), sfm.count.c_str());
 				//for(size_t i = 0;i < a.count; ++i)
 				WRITE_LINE("%s.count = 0;", sfm.GetVarName().c_str());
-				WRITE_LINE("for ( int i = 0; i < convfrommsg_.%s_size() && i < %s; ++i){", msg_var_name.c_str(), sfm.count.c_str());
+				WRITE_LINE("for ( size_t i = 0; i < (size_t)convfrommsg_.%s_size() && i < (sizeof(%s.list)/sizeof(%s.list[0])); ++i){", msg_var_name.c_str(), msg_var_name.c_str(), msg_var_name.c_str() );
 				st_var_name += ".list[i]";
 				msg_var_name += "(i)";
 				++level;
+			}
+			else {
+				msg_var_name += "()";
 			}
 			WRITE_LINE("%s;", sfm.GetScalarConvFromMeth("convfrommsg_", st_var_name, msg_var_name.c_str()).c_str());
 			if (sfm.field_desc->is_repeated()){
@@ -426,7 +429,7 @@ public:
 		WRITE_LINE("}");
 		///////////////////////////////////////////////////////////////////////////////
 		//bool operator ==  //for find
-		WRITE_LINE("bool\t\toperator == (const %s & rhs_) {", STMetaUtil::GetStructName(desc).c_str());
+		WRITE_LINE("bool\t\toperator == (const %s & rhs_) const {", STMetaUtil::GetStructName(desc).c_str());
 		++level;
 		for (size_t i = 0; i < msg_meta.pks_fields.size(); ++i){
 			string pred_prefix = "";
@@ -478,7 +481,7 @@ public:
 		WRITE_LINE("}");
 
 		//bool operator <  //for less //////////////////////////////////////////
-		WRITE_LINE("bool\t\toperator < (const %s & rhs_) {", STMetaUtil::GetStructName(desc).c_str());
+		WRITE_LINE("bool\t\toperator < (const %s & rhs_) const {", STMetaUtil::GetStructName(desc).c_str());
 		++level;
 		for (size_t i = 0; i < msg_meta.pks_fields.size(); ++i){
 			string pred_prefix = "";
@@ -536,10 +539,10 @@ public:
 				WRITE_LINE("int\t\tfind_idx_%s(const std::string & entry_) {",
 						sfm.GetVarName().c_str());
 				++level;
-				WRITE_LINE("auto it = std::find(%s.list, %s.list + %s.count, entry_,",
+				WRITE_LINE("auto it = std::find_if(%s.list, %s.list + %s.count, ",
 					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.GetVarName().c_str());
 				++level;
-				WRITE_LINE("[](const decltype(%s.list[0]) & t1, const std::string & t2){ return t2 > t1.data; }); ",
+				WRITE_LINE("[&entry_](decltype(%s.list[0]) & st) ->bool { return entry_ == st.data; }); ",
 					sfm.GetVarName().c_str());
 				--level;
 			}
@@ -624,16 +627,15 @@ public:
 			//-------insert_ ------------------------------------------------
 			//int	insert_x(int idx_, entry & v , bool shift_force_insert = false)
 			if (sfm.field_desc->type() == FieldDescriptor::TYPE_STRING){
-				WRITE_LINE("int\t\tinsert_%s(int idx_, const std::string & entry_, bool shift_force_insert_ = true) {",
+				WRITE_LINE("int\t\tinsert_%s(size_t idx_, const std::string & entry_, bool shift_force_insert_ = true) {",
 					sfm.GetVarName().c_str());
 				++level;
 				//if entry_.length() >= count return -1
 				WRITE_LINE("if ( entry_.length() >= %s ) { return -1; }", sfm.length.c_str());
-				WRITE_LINE("if ( idx_ < 0 || idx_ >= %s || idx_ > %s.count ) { return -2; }",
-					sfm.count.c_str(), sfm.GetVarName().c_str());
+				WRITE_LINE("if ( idx_ > %s.count ) { return -2; }", sfm.GetVarName().c_str());
 				WRITE_LINE("if ( %s.count < %s ) {", sfm.GetVarName().c_str(), sfm.count.c_str());
 				++level;
-				WRITE_LINE("memmove(%s.list + idx_ + 1, %s.list + idx_, (%s.count - idx_)*sizeof(%s.list[0]);",
+				WRITE_LINE("memmove(%s.list + idx_ + 1, %s.list + idx_, (%s.count - idx_)*sizeof(%s.list[0]));",
 					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.GetVarName().c_str());
 				WRITE_LINE("strncpy(%s.list[idx_].data, entry_.c_str(), %s-1);",
 					sfm.GetVarName().c_str(), sfm.length.c_str());
@@ -643,7 +645,7 @@ public:
 				WRITE_LINE("else {");
 				++level;
 				WRITE_LINE("if ( !shift_force_insert_ ) { return -3; }");
-				WRITE_LINE("memmove(%s.list + idx_ + 1, %s.list + idx_, (%s - 1 - idx_)*sizeof(%s.list[0]);",
+				WRITE_LINE("memmove(%s.list + idx_ + 1, %s.list + idx_, (%s - 1 - idx_)*sizeof(%s.list[0]));",
 					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.count.c_str(), sfm.GetVarName().c_str());
 				WRITE_LINE("strncpy(%s.list[idx_].data, entry_.c_str(), %s-1);",
 					sfm.GetVarName().c_str(), sfm.length.c_str());
@@ -654,7 +656,7 @@ public:
 				WRITE_LINE("}");
 			}
 			else {
-				WRITE_LINE("int\t\tinsert_%s(int idx_, const %s & entry_, bool shift_ = false) {",
+				WRITE_LINE("int\t\tinsert_%s(size_t idx_, const %s & entry_, bool shift_force_insert_ = false) {",
 					sfm.GetVarName().c_str(), sfm.GetScalarTypeName().c_str());
 				++level;
 				WRITE_LINE("if ( idx_ < 0 || idx_ >= %s || idx_ > %s.count ) { return -2; }",
@@ -662,7 +664,7 @@ public:
 				WRITE_LINE("if ( %s.count < %s ) {", sfm.GetVarName().c_str(), sfm.count.c_str());
 				++level;
 				//->
-				WRITE_LINE("memmove(%s.list + idx_ + 1, %s.list + idx_, (%s.count - idx_)*sizeof(%s.list[0]);",
+				WRITE_LINE("memmove(%s.list + idx_ + 1, %s.list + idx_, (%s.count - idx_)*sizeof(%s.list[0]));",
 					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.GetVarName().c_str());
 				WRITE_LINE("%s.list[idx_] = entry_;",sfm.GetVarName().c_str());
 				WRITE_LINE("++%s.count;", sfm.GetVarName().c_str());
@@ -671,7 +673,7 @@ public:
 				WRITE_LINE("else {");
 				++level;
 				WRITE_LINE("if ( !shift_force_insert_ ) { return -3; }");
-				WRITE_LINE("memmove(%s.list + idx_ + 1, %s.list + idx_, (%s - 1 - idx_)*sizeof(%s.list[0]);",
+				WRITE_LINE("memmove(%s.list + idx_ + 1, %s.list + idx_, (%s - 1 - idx_)*sizeof(%s.list[0]));",
 					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.count.c_str(), sfm.GetVarName().c_str());
 				WRITE_LINE("%s.list[idx_] = entry_;", sfm.GetVarName().c_str());
 				--level;
@@ -710,8 +712,8 @@ public:
 				WRITE_LINE("auto it = std::lower_bound(%s.list, %s.list + %s.count, entry_,",
 					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.GetVarName().c_str());
 				++level;
-				WRITE_LINE("[](const decltype(%s.list[0]) & t1, const std::string & t2){ return t2 > t1.data; }); ",
-					 sfm.GetVarName().c_str());
+				WRITE_LINE("[](decltype(%s.list[0]) & t2, const std::string & t1) ->bool { return t1 < t2.data; }); ",
+					sfm.GetVarName().c_str());
 				--level;
 
 				WRITE_LINE("if ( it != %s.list + %s.count ) { return it - %s.list; }",
@@ -740,7 +742,7 @@ public:
 				WRITE_LINE("auto it = std::upper_bound(%s.list, %s.list + %s.count, entry_,",
 					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.GetVarName().c_str());
 				++level;
-				WRITE_LINE("[](const decltype(%s.list[0]) & t1, const std::string & t2){ return t2 > t1.data; }); ",
+				WRITE_LINE("[](const std::string & t1,decltype(%s.list[0]) & t2) ->bool { return t1 < t2.data; }); ",
 					sfm.GetVarName().c_str());
 				--level;
 
@@ -812,7 +814,7 @@ public:
 					}
 					int md = reverse_refer[field].size();
 					reverse_refer[field].insert(msg);
-					if (md != reverse_refer[field].size()){
+					if (md != (int)reverse_refer[field].size()){
 						++msg_degrees[msg];//out degree
 					}
 				}
@@ -869,6 +871,10 @@ int main(int argc, char * argv[]){
 	}
 	auto pool = importer.pool();
 	auto desc = pool->FindMessageTypeByName(argv[2]);
+	if (!desc){
+		cerr << "not found message type:" << argv[2] << endl;
+		return -1;
+	}
 	GenerateCXXFlat gen(desc);
 	try {
 		gen.print();
