@@ -72,7 +72,7 @@ template<class D>
 int GetDescOption(string & value, D desc, const string & option){
 	int tag = 0;
 	value = "";
-	for (int i = 0; i < DIM_ARRAY(option_map_tag); ++i){
+	for (size_t i = 0; i < DIM_ARRAY(option_map_tag); ++i){
 		if (strcmp(option.c_str(), option_map_tag[i].option) == 0){
 			tag = option_map_tag[i].tag;
 		}
