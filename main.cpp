@@ -29,7 +29,7 @@ int main(int argc, char * argv[]){
 		return -1;
 	}
 	GenerateCXXFlat gen(desc);
-	STMessageMeta	smm;
+	EXTMessageMeta	smm;
 	if (smm.ParseFrom(desc)){
 		cerr << "parse from message desc error :" << error_stream.str() << endl;
 		return -2;

@@ -66,9 +66,9 @@ public:
 		//struct Msg {
 		WRITE_LINE("struct %s {", STMessageMetaUtil::GetStructName(desc).c_str());
 		level++;
-		std::vector<STFieldMeta>	fieldmeta_list;
+		std::vector<EXTFieldMeta>	fieldmeta_list;
 
-		STMessageMeta	msg_meta;
+		EXTMessageMeta	msg_meta;
 		if (msg_meta.ParseFrom(desc)){
 			throw logic_error("parse error !");
 		}

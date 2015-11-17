@@ -25,7 +25,7 @@ namespace google {
 	}
 }
 //////////////////////////////////////////////////////////////////////////////////////////////
-struct STFieldMeta {
+struct EXTFieldMeta {
 	const google::protobuf::FieldDescriptor * field_desc;
 	std::string f_count;
 	std::string f_length;
@@ -38,7 +38,7 @@ struct STFieldMeta {
 	std::string GetVarName();
 	std::string GetScalarConvToMeth(const char * convtomsg_, const std::string & st_var_name, const std::string & msg_var_name);
 	std::string GetScalarConvFromMeth(const char * convtomsg_, const std::string & st_var_name, const std::string & msg_var_name);
-
+	std::string GetMysqlFieldType();
 };
 
 //todo enumvaluemeta
@@ -47,7 +47,7 @@ struct STMessageMetaUtil {
 	static std::string GetStructName(const google::protobuf::Descriptor * desc);
 };
 
-struct STMessageMeta {
+struct EXTMessageMeta {
 	const google::protobuf::Descriptor * msg_desc;
 	std::string m_pks;
 	std::string m_divkey;
@@ -56,8 +56,8 @@ struct STMessageMeta {
 	std::string m_desc;
 	std::string m_relchk;
 	std::string m_autoinc;
-	std::vector<STFieldMeta*>		pks_fields;//if no , then all
-	std::vector<STFieldMeta>		sub_fields;
+	std::vector<EXTFieldMeta*>		pks_fields;//if no , then all
+	std::vector<EXTFieldMeta>		sub_fields;
 	std::vector<std::string>		pks_name;
 	int	    ParseFrom(const google::protobuf::Descriptor * desc);
 	void	ParseSubFields();

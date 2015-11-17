@@ -40,7 +40,7 @@ int GetDescOption(string & value,D desc, const string & option){
 #define GET_DESC_INT_OPTION(opt_name, desc)	do{string _value_opt_str;GetDescOption(_value_opt_str, desc, #opt_name);opt_name = std::stoi(_value_opt_str);}while(false)
 	
 
-int	    STFieldMeta::ParseFrom(const FieldDescriptor * desc){
+int	    EXTFieldMeta::ParseFrom(const FieldDescriptor * desc){
 	field_desc = desc;
 
 	GET_DESC_STR_OPTION(f_cn, field_desc);
@@ -63,7 +63,7 @@ int	    STFieldMeta::ParseFrom(const FieldDescriptor * desc){
 	}
 	return 0;
 }
-string STFieldMeta::GetScalarTypeName(){
+string EXTFieldMeta::GetScalarTypeName(){
 	static const char * s_var_type_names[] = { "", "int32_t", "uint32_t", "int64_t", "uint64_t", "double", "float", "const char *", "int32_t", "Message" };
 	const char * pszTypeName = s_var_type_names[field_desc->cpp_type()];
 	if (field_desc->cpp_type() == FieldDescriptor::CPPTYPE_ENUM){
@@ -74,7 +74,7 @@ string STFieldMeta::GetScalarTypeName(){
 	}
 	return pszTypeName;
 }
-string STFieldMeta::GetTypeName() {
+string EXTFieldMeta::GetTypeName() {
 	const char * pszTypeName = GetScalarTypeName().c_str();
 	if (field_desc->cpp_type() == FieldDescriptor::CPPTYPE_STRING){
 		if (field_desc->type() == FieldDescriptor::TYPE_STRING){
@@ -94,12 +94,12 @@ string STFieldMeta::GetTypeName() {
 		return pszTypeName;
 	}
 }
-string STFieldMeta::GetVarName() {
+string EXTFieldMeta::GetVarName() {
 	//static const char * type_prefix = ["", "i", "ll", "dw", "ull", "df", "f", "b", "en", "str", "st"];
 	//desc->camelcase_name();
 	return field_desc->lowercase_name();
 }
-string STFieldMeta::GetScalarConvToMeth(const char * convtomsg_, const string & st_var_name, const string & msg_var_name){
+string EXTFieldMeta::GetScalarConvToMeth(const char * convtomsg_, const string & st_var_name, const string & msg_var_name){
 	auto fmt = field_desc->message_type();
 	string meth = "";
 	string mutable_meth = "set_";
@@ -135,7 +135,7 @@ string STFieldMeta::GetScalarConvToMeth(const char * convtomsg_, const string & 
 	meth += ")";
 	return meth;
 }
-string STFieldMeta::GetScalarConvFromMeth(const char * convtomsg_, const string & st_var_name, const string & msg_var_name){
+string EXTFieldMeta::GetScalarConvFromMeth(const char * convtomsg_, const string & st_var_name, const string & msg_var_name){
 	auto fmt = field_desc->message_type();
 	string meth = "";
 	if (fmt){
@@ -191,7 +191,7 @@ std::string STMessageMetaUtil::GetStructName(const google::protobuf::Descriptor 
 }
 
 //////////////////////////////////////////////////////////////////////////
-int	    STMessageMeta::ParseFrom(const Descriptor * desc){
+int	    EXTMessageMeta::ParseFrom(const Descriptor * desc){
 	msg_desc = desc;
 
 	GET_DESC_STR_OPTION(m_pks, msg_desc);
@@ -208,14 +208,14 @@ int	    STMessageMeta::ParseFrom(const Descriptor * desc){
 
 	return ret;
 }
-void	STMessageMeta::ParseSubFields(){
+void	EXTMessageMeta::ParseSubFields(){
 	for (int i = 0; i < msg_desc->field_count(); ++i){
-		STFieldMeta sfm;
+		EXTFieldMeta sfm;
 		sfm.ParseFrom(msg_desc->field(i));
 		sub_fields.push_back(sfm);
 	}
 }
-int		STMessageMeta::ParsePKS(){
+int		EXTMessageMeta::ParsePKS(){
 	string::size_type bpos = 0, fpos = 0;
 	while (true && !m_pks.empty()){
 		fpos = m_pks.find(',', bpos);
