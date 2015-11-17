@@ -1,92 +1,63 @@
 #include "ext_meta.h"
 #include "google/protobuf/compiler/importer.h"
+#include "extensions_option.h"
 
 std::stringstream error_stream;
 using namespace std;
 using namespace google::protobuf;
 
-/*
-optional string pks = 50000;
-optional string divkey = 50001;
-optional uint32 divnum = 50002;
-optional string mcn = 50003;
-optional string mdesc = 50004;
-optional string relchk = 50005;
-}
-extend google.protobuf.FieldOptions {
-optional string  cn = 50000;
-optional string  desc = 50001;
-optional string  count = 50002;
-optional string  length = 50003;
-}
-extend google.protobuf.EnumValueOptions {
-optional string ecn = 50000;
-optional string edesc = 50001;
-*/
-static struct {
-	const char * option;
-	int tag;
-}  option_map_tag[] = {
-	{ "pks", 50000 },
-	{ "divkey", 50001 },
-	{ "divnum", 50002 },
-	{ "mcn", 50003 },
-	{ "mdesc", 50004 },
-	{ "relchk", 50005 },
-	{ "autoinc", 50006 },
 
-	///////////////////////////////////////
-	{ "cn", 50000 },
-	{ "desc", 50001 },
-	{ "count", 50002 },
-	{ "length", 50003 },
 
-	///////////////////////////////////////
-	{ "ecn", 50000 },
-	{ "edesc", 50001 },
-};
 #define DIM_ARRAY(a)	(sizeof((a))/sizeof((a)[0]))
+
+template<class D>
+static inline string descriptor_option(D desc, const string & opt);
+template<>
+inline string descriptor_option(const Descriptor * desc, const string & opt){
+	return proto_msg_opt(desc, opt.c_str());
+}
+template<>
+inline string descriptor_option(const FieldDescriptor * desc, const string & opt){
+	return proto_field_opt(desc, opt.c_str());
+}
+template<>
+inline string descriptor_option(const EnumValueDescriptor * desc, const string & opt){
+	return proto_enum_opt(desc, opt.c_str());
+}
 
 
 template<class D>
-int GetDescOption(string & value, D desc, const string & option){
-	int tag = 0;
-	value = "";
-	for (size_t i = 0; i < DIM_ARRAY(option_map_tag); ++i){
-		if (strcmp(option.c_str(), option_map_tag[i].option) == 0){
-			tag = option_map_tag[i].tag;
-		}
+int GetDescOption(string & value,D desc, const string & option){
+	value = descriptor_option(desc, option);
+	if (!value.empty()) {
+		return 0;
 	}
-	if (!tag){
-		error_stream << "not found the option->tag map option:" << option.c_str() << " in desc:" << desc->name() << endl;
-		return -1;
-	}
-	auto options = desc->options();
-	for (int j = 0; j < options.unknown_fields().field_count(); ++j){
-		auto ouf = options.unknown_fields().field(j);
-		if (ouf.number() == tag){ //cn
-			value = ouf.length_delimited();
-			//clog << "found the option:" << option.c_str() << " tag:" << tag << " value:"<< value << " in desc:" << desc->name() << endl;
-			return 0;
-		}
-	}
-	error_stream << "not found the option:" << option.c_str() << " tag:" << tag << " in desc:" << desc->name() << endl;
-	return -2;
+	error_stream << "not found the option:(" << option.c_str() << ") in desc:" << desc->name() << endl;
+	return -1;
 }
-
 //////////////////////////////////////////////////////////////////////////////////////////////
-int	    STFieldMeta::ParseFrom(const FieldDescriptor * fd){
-	field_desc = fd;
-	if (fd->is_repeated()){
+#define GET_DESC_STR_OPTION(opt_name, desc)	GetDescOption(opt_name, desc, #opt_name)
+#define GET_DESC_INT_OPTION(opt_name, desc)	do{string _value_opt_str;GetDescOption(_value_opt_str, desc, #opt_name);opt_name = std::stoi(_value_opt_str);}while(false)
+	
+
+int	    STFieldMeta::ParseFrom(const FieldDescriptor * desc){
+	field_desc = desc;
+
+	GET_DESC_STR_OPTION(f_cn, field_desc);
+	GET_DESC_STR_OPTION(f_desc, field_desc);
+	GET_DESC_STR_OPTION(f_count, field_desc);
+	GET_DESC_STR_OPTION(f_length, field_desc);
+
+	if (desc->is_repeated()){
 		//cout > 0
-		if (GetDescOption(count, fd, "count")){
-			error_stream << "the field:" << fd->name() << " in message:" << fd->type_name() << " is a repeat , but not found options [count] !" << endl;
+		if (f_count.empty()){
+			error_stream << "the field:" << desc->name() << " in message:" << desc->type_name() << " is a repeat , but not found options [count] !" << endl;
 			return -1;
 		}
 	}
-	if (fd->cpp_type() == FieldDescriptor::CPPTYPE_STRING){
-		if (GetDescOption(length, fd, "length")){
-			error_stream << "the field:" << fd->name() << " in message:" << fd->type_name() << " is a string , but not found options [length] !" << endl;
+	if (desc->cpp_type() == FieldDescriptor::CPPTYPE_STRING){
+		if (f_length.empty()){
+			error_stream << "the field:" << desc->name() << " in message:" << desc->type_name() << " is a string , but not found options [length] !" << endl;
 			return -2;
 		}
 	}
@@ -108,13 +79,13 @@ string STFieldMeta::GetTypeName() {
 	if (field_desc->cpp_type() == FieldDescriptor::CPPTYPE_STRING){
 		if (field_desc->type() == FieldDescriptor::TYPE_STRING){
 			string buffer_type_name = "struct { char data[";
-			buffer_type_name += length;
+			buffer_type_name += f_length;
 			buffer_type_name += "]; }";
 			return buffer_type_name;
 		}
 		else {
 			string buffer_type_name = "struct { size_t length; uint8_t data[";
-			buffer_type_name += length;
+			buffer_type_name += f_length;
 			buffer_type_name += "]; }";
 			return buffer_type_name;
 		}
@@ -184,7 +155,7 @@ string STFieldMeta::GetScalarConvFromMeth(const char * convtomsg_, const string 
 			meth += ".";
 			meth += msg_var_name;
 			meth += ".data(), ";
-			meth += length.c_str();
+			meth += f_length.c_str();
 			meth += "-1)";
 		}
 		else if (field_desc->type() == FieldDescriptor::TYPE_BYTES){
@@ -195,7 +166,7 @@ string STFieldMeta::GetScalarConvFromMeth(const char * convtomsg_, const string 
 			meth += ".";
 			meth += msg_var_name;
 			meth += ".data(), std::min((size_t)";
-			meth += length.c_str();
+			meth += f_length.c_str();
 			meth += ", (size_t)";
 			meth += convtomsg_;
 			meth += ".";
@@ -222,15 +193,14 @@ std::string STMessageMetaUtil::GetStructName(const google::protobuf::Descriptor 
 //////////////////////////////////////////////////////////////////////////
 int	    STMessageMeta::ParseFrom(const Descriptor * desc){
 	msg_desc = desc;
-#define GET_DESC_OPTION(pks)	GetDescOption(pks, msg_desc, #pks)
 
-	GET_DESC_OPTION(pks);
-	GET_DESC_OPTION(divkey);
-	GET_DESC_OPTION(divnum);
-	GET_DESC_OPTION(mcn);
-	GET_DESC_OPTION(mdesc);
-	GET_DESC_OPTION(relchk);
-	GET_DESC_OPTION(autoinc);
+	GET_DESC_STR_OPTION(m_pks, msg_desc);
+	GET_DESC_STR_OPTION(m_divkey, msg_desc);
+	GET_DESC_INT_OPTION(m_divnum, msg_desc);
+	GET_DESC_STR_OPTION(m_cn, msg_desc);
+	GET_DESC_STR_OPTION(m_desc, msg_desc);
+	GET_DESC_STR_OPTION(m_relchk, msg_desc);
+	GET_DESC_STR_OPTION(m_autoinc, msg_desc);
 
 	////////////////////////////
 	ParseSubFields();
@@ -247,15 +217,15 @@ void	STMessageMeta::ParseSubFields(){
 }
 int		STMessageMeta::ParsePKS(){
 	string::size_type bpos = 0, fpos = 0;
-	while (true && !pks.empty()){
-		fpos = pks.find(',', bpos);
+	while (true && !m_pks.empty()){
+		fpos = m_pks.find(',', bpos);
 		string f_field_name = "";
 		if (fpos != string::npos && fpos > bpos){
-			f_field_name = pks.substr(bpos, fpos - bpos);
+			f_field_name = m_pks.substr(bpos, fpos - bpos);
 		}
 		else {
 			if (fpos != bpos){
-				f_field_name = pks.substr(bpos);
+				f_field_name = m_pks.substr(bpos);
 			}
 		}
 		pks_name.push_back(f_field_name);
@@ -324,7 +294,7 @@ int		ProtoMeta::Init(const char * path, ...){
 const google::protobuf::FileDescriptor * ProtoMeta::LoadFile(const char * file){
 	auto ret = importer->Import(file);
 	if (!ret){
-		cerr << "error import !" << endl;
+		cerr << "error import file:" << file << endl;
 		return nullptr;
 	}
 	return ret;

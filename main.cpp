@@ -34,6 +34,8 @@ int main(int argc, char * argv[]){
 		cerr << "parse from message desc error :" << error_stream.str() << endl;
 		return -2;
 	}
+	cerr << error_stream.str() << endl;
+	error_stream.clear();
 	try {
 		gen.print();
 	}

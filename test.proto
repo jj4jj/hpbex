@@ -14,21 +14,21 @@ message HelloC {
     optional HelloB b = 2;
 }
 message HelloD {
-    option(pks)="f1";
+    option(m_pks)="f1";
     optional int32 f1 = 1;
     optional HelloB b = 2;
     optional HelloC c = 3;
-    repeated bytes d = 4[(length)="20",(count)="5"];
+    repeated bytes d = 4[(f_length)="20",(f_count)="5"];
 }
 message Hello {
-    option(mcn)="ssss";
-    option(mdesc)="hello, world";
-    option(relchk)="";
-    option(pks)="id";
+    option(m_cn)="ssss";
+    option(m_desc)="hello, world";
+    option(m_relchk)="";
+    option(m_pks)="id";
 
-    optional int32 id = 1[(cn)="id",(desc)="id"];
-    repeated string myworld = 2[(length)="32",(count)="32"];
-    repeated int32 roleids = 3[(count)="32"];
+    optional int32 id = 1[(f_cn)="id",(f_desc)="id"];
+    repeated string myworld = 2[(f_length)="32",(f_count)="32"];
+    repeated int32 roleids = 3[(f_count)="32"];
     optional HelloD d = 4;
-    repeated HelloD rd = 5[(count)="32"];
+    repeated HelloD rd = 5[(f_count)="32"];
 }

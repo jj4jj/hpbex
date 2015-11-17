@@ -2,21 +2,22 @@
 //package google.protobuf;
 import "google/protobuf/descriptor.proto";
 extend google.protobuf.MessageOptions {
-    optional string pks = 50000;
-    optional string divkey = 50001;
-    optional uint32 divnum = 50002;
-    optional string mcn = 50003;
-    optional string mdesc = 50004;
-    optional string relchk = 50005;
+    optional string m_pks = 50000;
+    optional string m_divkey = 50001;
+    optional uint32 m_divnum = 50002;
+    optional string m_cn = 50003;
+    optional string m_desc = 50004;
+    optional string m_relchk = 50005;
+    optional string m_autoinc = 50006;
 }
 extend google.protobuf.FieldOptions {
-    optional string  cn = 50000;
-    optional string  desc = 50001;
-    optional string  count = 50002;
-    optional string  length = 50003;
+    optional string  f_cn = 50000;
+    optional string  f_desc = 50001;
+    optional string  f_count = 50002;
+    optional string  f_length = 50003;
 }
 extend google.protobuf.EnumValueOptions {
-    optional string ecn = 50000;
-    optional string edesc = 50001;
+    optional string e_cn = 50000;
+    optional string e_desc = 50001;
 }
 

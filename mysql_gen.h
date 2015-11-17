@@ -11,7 +11,7 @@ class MySQLMsgConverter {
 	STMessageMeta			meta;
 	std::string			field_buffer;
 	std::string			escaped_buffer;
-	ProtoMeta			pm;
+	ProtoMeta			protometa;
 public:
 	MySQLMsgConverter(const std::string & file, st_mysql * pMysql, size_t MAX_FIELD_BUFFER = 1024 * 1024);
 private:

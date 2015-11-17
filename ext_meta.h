@@ -27,10 +27,10 @@ namespace google {
 //////////////////////////////////////////////////////////////////////////////////////////////
 struct STFieldMeta {
 	const google::protobuf::FieldDescriptor * field_desc;
-	std::string count;
-	std::string length;
-	std::string cn;
-	std::string desc;
+	std::string f_count;
+	std::string f_length;
+	std::string f_cn;
+	std::string f_desc;
 
 	int			ParseFrom(const google::protobuf::FieldDescriptor * fd);
 	std::string GetScalarTypeName();
@@ -48,13 +48,13 @@ struct STMessageMetaUtil {
 
 struct STMessageMeta {
 	const google::protobuf::Descriptor * msg_desc;
-	std::string pks;
-	std::string divkey;
-	std::string divnum;
-	std::string mcn;
-	std::string mdesc;
-	std::string relchk;
-	std::string autoinc;
+	std::string m_pks;
+	std::string m_divkey;
+	int32_t		m_divnum;
+	std::string m_cn;
+	std::string m_desc;
+	std::string m_relchk;
+	std::string m_autoinc;
 	std::vector<STFieldMeta*>		pks_fields;//if no , then all
 	std::vector<STFieldMeta>		sub_fields;
 	std::vector<std::string>		pks_name;

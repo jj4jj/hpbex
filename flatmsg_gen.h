@@ -74,12 +74,12 @@ public:
 		}
 
 		for (auto & sfm : msg_meta.sub_fields){
-			if (sfm.count.empty()){
+			if (sfm.f_count.empty()){
 				WRITE_LINE("%s\t\t%s;", sfm.GetTypeName().c_str(), sfm.GetVarName().c_str());
 			}
 			else {
 				WRITE_LINE("struct {size_t count; %s list[%s];}\t\t%s;",
-					sfm.GetTypeName().c_str(), sfm.count.c_str(), sfm.GetVarName().c_str());
+					sfm.GetTypeName().c_str(), sfm.f_count.c_str(), sfm.GetVarName().c_str());
 			}
 			fieldmeta_list.push_back(sfm);
 		}
@@ -95,8 +95,8 @@ public:
 		for (auto & sfm : msg_meta.sub_fields){
 			//set
 			string st_var_name = sfm.GetVarName();
-			if (sfm.field_desc->is_repeated()){
-				WRITE_LINE("assert(%s.count <= %s);//assertion", st_var_name.c_str(), sfm.count.c_str());
+			if (!sfm.f_count.empty()){
+				WRITE_LINE("assert(%s.count <= %s);//assertion", st_var_name.c_str(), sfm.f_count.c_str());
 				//for(size_t i = 0;i < a.count; ++i)
 				WRITE_LINE("for ( size_t i = 0; i < %s.count && i < (sizeof(%s.list)/sizeof(%s.list[0])); ++i){",
 					st_var_name.c_str(), st_var_name.c_str(), st_var_name.c_str());
@@ -104,7 +104,7 @@ public:
 				++level;
 			}
 			WRITE_LINE("%s;", sfm.GetScalarConvToMeth("convtomsg_", st_var_name, sfm.field_desc->name()).c_str());
-			if (sfm.field_desc->is_repeated()){
+			if (!sfm.f_count.empty()){
 				--level;
 				WRITE_LINE("}");
 			}
@@ -119,8 +119,8 @@ public:
 			//set
 			string st_var_name = sfm.GetVarName();
 			string msg_var_name = sfm.field_desc->name();
-			if (sfm.field_desc->is_repeated()){
-				WRITE_LINE("assert(convfrommsg_.%s_size() <= %s);//assertion", msg_var_name.c_str(), sfm.count.c_str());
+			if (!sfm.f_count.empty()){
+				WRITE_LINE("assert(convfrommsg_.%s_size() <= %s);//assertion", msg_var_name.c_str(), sfm.f_count.c_str());
 				//for(size_t i = 0;i < a.count; ++i)
 				WRITE_LINE("%s.count = 0;", sfm.GetVarName().c_str());
 				WRITE_LINE("for ( size_t i = 0; i < (size_t)convfrommsg_.%s_size() && i < (sizeof(%s.list)/sizeof(%s.list[0])); ++i){", msg_var_name.c_str(), msg_var_name.c_str(), msg_var_name.c_str());
@@ -132,7 +132,7 @@ public:
 				msg_var_name += "()";
 			}
 			WRITE_LINE("%s;", sfm.GetScalarConvFromMeth("convfrommsg_", st_var_name, msg_var_name.c_str()).c_str());
-			if (sfm.field_desc->is_repeated()){
+			if (!sfm.f_count.empty()){
 				WRITE_LINE("++%s.count;", sfm.GetVarName().c_str());
 				--level;
 				WRITE_LINE("}");
@@ -168,7 +168,7 @@ public:
 				WRITE_LINE("%s (strncmp(%s.data, rhs.%s.data, %s) == 0) %s",
 					pred_prefix.c_str(),
 					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
-					sfm.length.c_str(), pred_postfix.c_str());
+					sfm.f_length.c_str(), pred_postfix.c_str());
 			}
 			else if (sfm.field_desc->type() == FieldDescriptor::TYPE_BYTES){
 				WRITE_LINE("%s (%s.length == rhs_.%s.length && memcmp(%s.data, rhs_.%s.data, %s.length) == 0) %s",
@@ -213,7 +213,7 @@ public:
 				WRITE_LINE("%s (strncmp(%s.data, rhs_.%s.data, %s) < 0 ) %s",
 					pred_prefix.c_str(),
 					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
-					sfm.length.c_str(), pred_postfix.c_str());
+					sfm.f_length.c_str(), pred_postfix.c_str());
 			}
 			else if (sfm.field_desc->type() == FieldDescriptor::TYPE_BYTES){
 				WRITE_LINE("%s (memcmp(%s.data, rhs_.%s.data, std::min(%s.length, rhs_.%s.length) < 0 ) %s",
@@ -241,7 +241,7 @@ public:
 
 		//////////////////////////////////////////////////////////////////////////////////////
 		for (auto & sfm : msg_meta.sub_fields){
-			if (sfm.count.empty()){
+			if (sfm.f_count.empty()){
 				continue;
 			}
 			if (sfm.field_desc->type() == FieldDescriptor::TYPE_BYTES){
@@ -278,13 +278,13 @@ public:
 					sfm.GetVarName().c_str());
 				++level;
 				//if entry_.length() >= count return -1
-				WRITE_LINE("if ( entry_.length() >= %s ) { return -1; }", sfm.length.c_str());
-				WRITE_LINE("if ( %s.count < %s ) {", sfm.GetVarName().c_str(), sfm.count.c_str());
+				WRITE_LINE("if ( entry_.length() >= %s ) { return -1; }", sfm.f_length.c_str());
+				WRITE_LINE("if ( %s.count < %s ) {", sfm.GetVarName().c_str(), sfm.f_count.c_str());
 				++level;
 				//%s.list[count] = entry_;
 				//++count;
 				WRITE_LINE("strncpy(%s.list[%s.count].data, entry_.c_str(), %s-1);",
-					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.length.c_str());
+					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.f_length.c_str());
 				WRITE_LINE("++%s.count;", sfm.GetVarName().c_str());
 				--level;
 				WRITE_LINE("}");
@@ -299,9 +299,9 @@ public:
 				//src[n - 1] = entry_;
 				WRITE_LINE("memmove(%s.list, %s.list + 1, (%s-1)*sizeof(%s.list[0]));",
 					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
-					sfm.count.c_str(), sfm.GetVarName().c_str());
+					sfm.f_count.c_str(), sfm.GetVarName().c_str());
 				WRITE_LINE("strncpy(%s.list[%s - 1].data, entry_.c_str(), %s-1);",
-					sfm.GetVarName().c_str(), sfm.count.c_str(), sfm.length.c_str());
+					sfm.GetVarName().c_str(), sfm.f_count.c_str(), sfm.f_length.c_str());
 				--level;
 				WRITE_LINE("}");
 				WRITE_LINE("return 0;");
@@ -312,7 +312,7 @@ public:
 				WRITE_LINE("int\t\tappend_%s(const %s & entry_, bool shift_ = false) {",
 					sfm.GetVarName().c_str(), sfm.GetScalarTypeName().c_str());
 				++level;
-				WRITE_LINE("if ( %s.count < %s ) {", sfm.GetVarName().c_str(), sfm.count.c_str());
+				WRITE_LINE("if ( %s.count < %s ) {", sfm.GetVarName().c_str(), sfm.f_count.c_str());
 				++level;
 				//%s.list[count] = entry_;
 				//++count;
@@ -328,9 +328,9 @@ public:
 				//src[n - 1] = entry_;
 				WRITE_LINE("memmove(%s.list, %s.list + 1, (%s-1)*sizeof(%s.list[0]));",
 					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
-					sfm.count.c_str(), sfm.GetVarName().c_str());
+					sfm.f_count.c_str(), sfm.GetVarName().c_str());
 				WRITE_LINE("%s.list[%s - 1] = entry_;",
-					sfm.GetVarName().c_str(), sfm.count.c_str());
+					sfm.GetVarName().c_str(), sfm.f_count.c_str());
 				--level;
 				WRITE_LINE("}");
 				WRITE_LINE("return 0;");
@@ -344,14 +344,14 @@ public:
 					sfm.GetVarName().c_str());
 				++level;
 				//if entry_.length() >= count return -1
-				WRITE_LINE("if ( entry_.length() >= %s ) { return -1; }", sfm.length.c_str());
+				WRITE_LINE("if ( entry_.length() >= %s ) { return -1; }", sfm.f_length.c_str());
 				WRITE_LINE("if ( idx_ > %s.count ) { return -2; }", sfm.GetVarName().c_str());
-				WRITE_LINE("if ( %s.count < %s ) {", sfm.GetVarName().c_str(), sfm.count.c_str());
+				WRITE_LINE("if ( %s.count < %s ) {", sfm.GetVarName().c_str(), sfm.f_count.c_str());
 				++level;
 				WRITE_LINE("memmove(%s.list + idx_ + 1, %s.list + idx_, (%s.count - idx_)*sizeof(%s.list[0]));",
 					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.GetVarName().c_str());
 				WRITE_LINE("strncpy(%s.list[idx_].data, entry_.c_str(), %s-1);",
-					sfm.GetVarName().c_str(), sfm.length.c_str());
+					sfm.GetVarName().c_str(), sfm.f_length.c_str());
 				WRITE_LINE("++%s.count;", sfm.GetVarName().c_str());
 				--level;
 				WRITE_LINE("}");
@@ -359,9 +359,9 @@ public:
 				++level;
 				WRITE_LINE("if ( !shift_force_insert_ ) { return -3; }");
 				WRITE_LINE("memmove(%s.list + idx_ + 1, %s.list + idx_, (%s - 1 - idx_)*sizeof(%s.list[0]));",
-					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.count.c_str(), sfm.GetVarName().c_str());
+					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.f_count.c_str(), sfm.GetVarName().c_str());
 				WRITE_LINE("strncpy(%s.list[idx_].data, entry_.c_str(), %s-1);",
-					sfm.GetVarName().c_str(), sfm.length.c_str());
+					sfm.GetVarName().c_str(), sfm.f_length.c_str());
 				--level;
 				WRITE_LINE("}");
 				WRITE_LINE("return 0;");
@@ -373,8 +373,8 @@ public:
 					sfm.GetVarName().c_str(), sfm.GetScalarTypeName().c_str());
 				++level;
 				WRITE_LINE("if ( idx_ < 0 || idx_ >= %s || idx_ > %s.count ) { return -2; }",
-					sfm.count.c_str(), sfm.GetVarName().c_str());
-				WRITE_LINE("if ( %s.count < %s ) {", sfm.GetVarName().c_str(), sfm.count.c_str());
+					sfm.f_count.c_str(), sfm.GetVarName().c_str());
+				WRITE_LINE("if ( %s.count < %s ) {", sfm.GetVarName().c_str(), sfm.f_count.c_str());
 				++level;
 				//->
 				WRITE_LINE("memmove(%s.list + idx_ + 1, %s.list + idx_, (%s.count - idx_)*sizeof(%s.list[0]));",
@@ -387,7 +387,7 @@ public:
 				++level;
 				WRITE_LINE("if ( !shift_force_insert_ ) { return -3; }");
 				WRITE_LINE("memmove(%s.list + idx_ + 1, %s.list + idx_, (%s - 1 - idx_)*sizeof(%s.list[0]));",
-					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.count.c_str(), sfm.GetVarName().c_str());
+					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.f_count.c_str(), sfm.GetVarName().c_str());
 				WRITE_LINE("%s.list[idx_] = entry_;", sfm.GetVarName().c_str());
 				--level;
 				WRITE_LINE("}");

@@ -120,9 +120,9 @@ int		MySQLMsgConverter::GetFieldsSQLKList(std::vector<std::pair<string, string> 
 }
 string MySQLMsgConverter::GetTableName(){
 	string tb_name = desc->name();
-	if (!meta.divnum.empty()){
-		uint64_t ullspkey = std::stoull(GetFieldValue(meta.divkey.c_str()));
-		size_t spnum = std::stoi(meta.divnum);
+	if (!meta.m_divnum.empty()){
+		uint64_t ullspkey = std::stoull(GetFieldValue(meta.m_divkey.c_str()));
+		size_t spnum = std::stoi(meta.m_divnum);
 		tb_name += "_" + std::to_string(ullspkey % spnum);
 	}
 	return tb_name;
@@ -130,34 +130,38 @@ string MySQLMsgConverter::GetTableName(){
 int		MySQLMsgConverter::InitSchema(const google::protobuf::Message & msg_){
 	msg = &msg_;
 	msg_name = msg_.GetDescriptor()->name();
-	if (pm.Init(nullptr)){
+	if (protometa.Init(nullptr)){
 		error_stream << "proto meta init error !" << endl;
 		return -1;
 	}
-	if (!pm.LoadFile(meta_file.c_str())){
+	if (!protometa.LoadFile(meta_file.c_str())){
 		error_stream << "proto meta load error !" << endl;
 		return -2;
 	}
-	desc = pm.GetPool()->FindMessageTypeByName(msg_name.c_str());
+	desc = protometa.GetPool()->FindMessageTypeByName(msg_name.c_str());
 	if (!desc){
 		error_stream << "not found message type:" << msg_name << endl;
 		return -3;
 	}
 	if (meta.ParseFrom(desc)){
 		//error parse from desc
-		return -1;
+		error_stream << "error parse from desc " << endl;
+		return -4;
 	}
 	if (meta.pks_name.empty()){
 		//not found the pk def
-		return -2;
+		error_stream << "not found the pk def " << endl;
+		return -5;
 	}
 	if (meta.pks_name.size() != meta.pks_fields.size()){
-		return -3;
+		error_stream << "meta pks size not match " << endl;
+		return -6;
 	}
-	if (!meta.divnum.empty()){
+	if (!meta.m_divnum.empty()){
 		//must be a integer 
-		if (std::stoi(meta.divnum) <= 0){
-			return -4;
+		if (std::stoi(meta.m_divnum) <= 0){
+			error_stream << "meta divnum is error :" << meta.m_divnum << endl;
+			return -7;
 		}
 	}
 	return 0;
@@ -321,7 +325,7 @@ int		MySQLMsgConverter::Update(std::string & sql){
 				break;
 			}
 		}
-		if (is_pk || kv.first == meta.autoinc)
+		if (is_pk || kv.first == meta.m_autoinc)
 		{
 			continue;
 		}
@@ -335,15 +339,15 @@ int		MySQLMsgConverter::Update(std::string & sql){
 		sql += "=";
 		sql += kv.second;
 	}
-	if (!meta.autoinc.empty())
+	if (!meta.m_autoinc.empty())
 	{
 		if (is_first != 0)
 		{
 			sql += " , ";
 		}
-		sql += meta.autoinc;
+		sql += meta.m_autoinc;
 		sql += "=";
-		sql += meta.autoinc;
+		sql += meta.m_autoinc;
 		sql += "+1";
 	}
 	//where
@@ -393,10 +397,10 @@ int		MySQLMsgConverter::Insert(string & sql){
 		}
 		sql += kvlist[i].first;
 	}
-	if (!meta.autoinc.empty())
+	if (!meta.m_autoinc.empty())
 	{
 		sql += ",";
-		sql += meta.autoinc;
+		sql += meta.m_autoinc;
 	}
 	sql += ") VALUES (";
 	//VALUES(vs)
@@ -408,7 +412,7 @@ int		MySQLMsgConverter::Insert(string & sql){
 		}
 		sql += kvlist[i].second;
 	}
-	if (!meta.autoinc.empty())
+	if (!meta.m_autoinc.empty())
 	{
 		sql += ",";
 		sql += "0";
