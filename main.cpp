@@ -316,6 +316,26 @@ struct STMessageMeta {
 	}
 };
 
+struct TemplateMsg_GenerateCXXFlat {
+	int32_t		x;
+	
+	void	construct();
+	void	convto();
+	void	convfrom();
+	//bool	operator == () const ;
+	//bool	operator < () const ;
+	int		find_idx_x();
+	int		append_x();
+	int		insert_x();
+	int		remove_x();
+	////////////////////////
+	int		lower_bound_x();
+	int		upper_bound_x();
+	int		binsert_x();
+
+};
+
+
 
 class GenerateCXXFlat {
 	typedef std::unordered_map<const Descriptor *, int>										MsgDegree;
