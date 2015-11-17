@@ -1,6 +1,6 @@
 #include "mysql_gen.h"
-//#include "test.pb.h"
-//#include "test.hpb.h"
+#include "test.pb.h"
+#include "test.hpb.h"
 #include <iostream>
 #include "google/protobuf/compiler/importer.h"
 
@@ -15,6 +15,7 @@ int main(){
 	hs1.convto(hello);
 	std::cout << "dump:" << hello.ShortDebugString() << std::endl;
 	*/
+#if 0
 
 	ProtoMeta pm;
 	if (pm.Init(nullptr)){
@@ -40,8 +41,8 @@ int main(){
 	}
 	clog << error_stream.str() << endl;
 	error_stream.clear();
+#endif
 
-#if 0
 	Hello hello;
 	MySQLMsgConverter	msc("test.proto", nullptr);
 	int iret = msc.InitSchema(hello);
@@ -65,7 +66,6 @@ int main(){
 
 	msc.Select(sql);
 	cout << sql << endl;
-#endif
 
 
 	return 0;

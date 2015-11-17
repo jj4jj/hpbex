@@ -41,6 +41,7 @@ struct STFieldMeta {
 
 };
 
+//todo enumvaluemeta
 
 struct STMessageMetaUtil {
 	static std::string GetStructName(const google::protobuf::Descriptor * desc);

@@ -52,8 +52,7 @@ int		MySQLMsgConverter::GetFieldsSQLKList(std::vector<std::pair<string, string> 
 	for (int i = 0; i < desc->field_count(); ++i)
 	{
 		const FieldDescriptor * pField = desc->field(i);
-		if (!pField)
-		{
+		if (!pField){
 			continue;
 		}
 		std::pair<std::string, std::string> kv;
@@ -65,48 +64,78 @@ int		MySQLMsgConverter::GetFieldsSQLKList(std::vector<std::pair<string, string> 
 		switch (pField->cpp_type())
 		{
 		case FieldDescriptor::CPPTYPE_FLOAT:
-			field_buffer = std::to_string(pReflection->GetFloat(*msg, pField));
+			if (pReflection->HasField(*msg, pField)){
+				field_buffer = std::to_string(pReflection->GetFloat(*msg, pField));
+			}
 			break;
 		case FieldDescriptor::CPPTYPE_DOUBLE:
-			field_buffer = std::to_string(pReflection->GetDouble(*msg, pField));
+			if (pReflection->HasField(*msg, pField)){
+				field_buffer = std::to_string(pReflection->GetDouble(*msg, pField)); \
+			}
 			break;
 		case FieldDescriptor::CPPTYPE_INT32:
-			field_buffer = std::to_string(pReflection->GetInt32(*msg, pField));
+			if (pReflection->HasField(*msg, pField)){
+				field_buffer = std::to_string(pReflection->GetInt32(*msg, pField));
+			}
 			break;
 		case FieldDescriptor::CPPTYPE_INT64:
-			field_buffer = std::to_string(pReflection->GetInt64(*msg, pField));
+			if (pReflection->HasField(*msg, pField)){
+				field_buffer = std::to_string(pReflection->GetInt64(*msg, pField));
+			}
 			break;
 		case FieldDescriptor::CPPTYPE_UINT32:
-			field_buffer = std::to_string(pReflection->GetUInt32(*msg, pField));
+			if (pReflection->HasField(*msg, pField)){
+				field_buffer = std::to_string(pReflection->GetUInt32(*msg, pField));
+			}
 			break;
 		case FieldDescriptor::CPPTYPE_UINT64:
-			field_buffer = std::to_string(pReflection->GetUInt64(*msg, pField));
+			if (pReflection->HasField(*msg, pField)){
+				field_buffer = std::to_string(pReflection->GetUInt64(*msg, pField));
+			}
 			break;
 		case FieldDescriptor::CPPTYPE_ENUM:
-			field_buffer = std::to_string(pReflection->GetEnum(*msg, pField)->number());
+			if (pReflection->HasField(*msg, pField)){
+				field_buffer = std::to_string(pReflection->GetEnum(*msg, pField)->number());
+			}
 			break;
 		case FieldDescriptor::CPPTYPE_BOOL:
-			field_buffer = std::to_string(pReflection->GetBool(*msg, pField));
+			if (pReflection->HasField(*msg, pField)){
+				field_buffer = std::to_string(pReflection->GetBool(*msg, pField));
+			}
 			break;
 		case FieldDescriptor::CPPTYPE_STRING:
-			field_buffer.assign(pReflection->GetString(*msg, pField));
-			if (field_buffer.empty()){
-				field_buffer = "''";
+			if (pReflection->HasField(*msg, pField)){
+				field_buffer.assign(pReflection->GetString(*msg, pField));
+				if (field_buffer.empty()){
+					field_buffer = "''";
+				}
 			}
 			break;
 		case FieldDescriptor::CPPTYPE_MESSAGE:
-		{
-													const Message & _tmpmsg = pReflection->GetMessage(*msg, pField);
-													_tmpmsg.SerializeToArray((char*)field_buffer.data(), field_buffer.capacity());
-													buffer_msg = (char*)field_buffer.data();
-													buffer_len = _tmpmsg.ByteSize();
-		}
+			if (pReflection->HasField(*msg, pField)){
+				const Message & _tmpmsg = pReflection->GetMessage(*msg, pField);
+				_tmpmsg.SerializeToArray((char*)field_buffer.data(), field_buffer.capacity());
+				buffer_msg = (char*)field_buffer.data();
+				buffer_len = _tmpmsg.ByteSize();
+			}
 			break;
 		default:
 			return -1;
 		}
 		if (buffer_len == 0){
-			buffer_len = field_buffer.length();
+			if (field_buffer.empty()){
+				if (pField->cpp_type() <= FieldDescriptor::CPPTYPE_ENUM){
+					field_buffer = "0";
+					buffer_len = 1;
+				}
+				else if (pField->cpp_type() <= FieldDescriptor::CPPTYPE_STRING) {
+					field_buffer = "''";
+					buffer_len = 2;
+				}
+			}
+			else{
+				buffer_len = field_buffer.length();
+			}
 		}
 		//need escape
 		bzero((char*)escaped_buffer.data() + buffer_len,
@@ -120,10 +149,9 @@ int		MySQLMsgConverter::GetFieldsSQLKList(std::vector<std::pair<string, string> 
 }
 string MySQLMsgConverter::GetTableName(){
 	string tb_name = desc->name();
-	if (!meta.m_divnum.empty()){
+	if (meta.m_divnum > 0){
 		uint64_t ullspkey = std::stoull(GetFieldValue(meta.m_divkey.c_str()));
-		size_t spnum = std::stoi(meta.m_divnum);
-		tb_name += "_" + std::to_string(ullspkey % spnum);
+		tb_name += "_" + std::to_string(ullspkey % meta.m_divnum);
 	}
 	return tb_name;
 }
@@ -157,12 +185,10 @@ int		MySQLMsgConverter::InitSchema(const google::protobuf::Message & msg_){
 		error_stream << "meta pks size not match " << endl;
 		return -6;
 	}
-	if (!meta.m_divnum.empty()){
+	if (meta.m_divnum < 0){
 		//must be a integer 
-		if (std::stoi(meta.m_divnum) <= 0){
-			error_stream << "meta divnum is error :" << meta.m_divnum << endl;
-			return -7;
-		}
+		error_stream << "meta divnum is error :" << meta.m_divnum << endl;
+		return -7;
 	}
 	return 0;
 }
