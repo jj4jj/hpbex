@@ -7,7 +7,7 @@ test:
 	./hpbex test.proto Hello
 src: test.proto hpbex ext
 	./hpbex test.proto Hello > test.hpb.h
-cl: src
+cl: pb src
 	g++ test.cpp *.cc -o test -I/usr/local/include -std=c++11 -g -Wall -lprotobuf
 pb: test.proto
 	protoc test.proto extensions.proto -I. -I/usr/local/include --cpp_out=.
