@@ -26,12 +26,16 @@ public:
 	int				DropTable(std::string & sql);
 };
 
+
+
+
+
 class MySQLMsgConverter {
 	std::string			meta_file;
 	st_mysql *			mysql;
 	std::string			field_buffer;
 	std::string			escaped_buffer;
-	EXTProtoMeta			protometa; //dynloading
+	EXTProtoMeta		protometa; //dynloading
 public:
 	MySQLMsgConverter(const std::string & file, st_mysql * pMysql, size_t MAX_FIELD_BUFFER = 1024 * 1024);
 public:
@@ -46,4 +50,5 @@ public:
 	//todo
 	int				AlterTables(std::map<std::string, std::string> old_fields_type, std::string & sql);
 	const google::protobuf::Descriptor *	GetMsgDesc(const char * msg_type);
+	EXTProtoMeta &		GetProtoMeta() { return protometa; }
 };
