@@ -1,19 +1,21 @@
 #pragma once
 #include "ext_meta.h"
+#include <map>
 struct st_mysql;
-
+class MySQLMsgConverter;
 struct MySQLMsgMeta {
+	MySQLMsgConverter	*					cvt;
 	const google::protobuf::Descriptor *	msg_desc;
 	const google::protobuf::Message *		msg;
-	MySQLMsgConverter	*					cvt;
 	EXTMessageMeta							meta;
 public:
-	MySQLMsgMeta(MySQLMsgConverter * pCvt,
-		const google::protobuf::Descriptor * msg_desc_ = nullptr,
-		const google::protobuf::Message * msg_ = nullptr);
-	int		Init();
+	MySQLMsgMeta(MySQLMsgConverter * pCvt);
+	int		AttachMsg(const google::protobuf::Message *		msg);
+private:
+	void	construct();
 public:
 	std::string		GetTableName();
+	int32_t			GetTableIdx();
 	int				Select(std::string & sql, std::vector<std::string> * fields = nullptr, const char * where_ = nullptr);
 	int				Delete(std::string & sql, const char * where_ = nullptr);
 	int				Replace(std::string & sql);
@@ -29,16 +31,18 @@ class MySQLMsgConverter {
 	st_mysql *			mysql;
 	std::string			field_buffer;
 	std::string			escaped_buffer;
-	ProtoMeta			protometa; //dynloading
+	EXTProtoMeta			protometa; //dynloading
 public:
 	MySQLMsgConverter(const std::string & file, st_mysql * pMysql, size_t MAX_FIELD_BUFFER = 1024 * 1024);
 public:
 	std::string		GetFieldValue(const google::protobuf::Message & msg, const char * key);
 	int				GetFieldsSQLKList(const google::protobuf::Message & msg, std::vector<std::pair<std::string, std::string> > & values);
+	std::string		GetTableName(const char * msg_type, int idx = -1);
 public:
 	int				InitSchema();
-	MySQLMsgMeta		GetMySQLMsg(const char * msg_type, const google::protobuf::Message * msg);
-	int				CreateTable(const char * msg_type, std::string & sql);
+	int				CreateTables(const char * msg_type, std::string & sql, int idx = -1);
 	int				CreateDB(const char * db_name, std::string & sql);
 	int				DropDB(const char * db_name, std::string & sql);
+
+	const google::protobuf::Descriptor *	GetMsgDesc(const char * msg_type);
 };

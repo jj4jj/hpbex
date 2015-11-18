@@ -11,7 +11,7 @@ int main(int argc, char * argv[]){
 		cout << "usage:" << argv[0] << " <file name> <message type> [path]" << endl;
 		return -1;
 	}
-	ProtoMeta pm;
+	EXTProtoMeta pm;
 	if (pm.Init(nullptr)){
 		cerr << "init proto meta error !" << endl;
 		return -2;
@@ -30,7 +30,7 @@ int main(int argc, char * argv[]){
 	}
 	GenerateCXXFlat gen(desc);
 	EXTMessageMeta	smm;
-	if (smm.ParseFrom(desc)){
+	if (smm.AttachDesc(desc)){
 		cerr << "parse from message desc error :" << error_stream.str() << endl;
 		return -2;
 	}

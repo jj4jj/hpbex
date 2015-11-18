@@ -45,26 +45,45 @@ int main(){
 
 	Hello hello;
 	MySQLMsgConverter	msc("test.proto", nullptr);
-	int iret = msc.InitSchema(hello);
+	int iret = msc.InitSchema();
 	if (iret){
 		cerr << "init schama error ! ret:" << iret << endl;
 		cerr << error_stream.str() << endl;
 		return -1;
 	}
+	//auto hellogen =	msc.GetMsgDesc("Hello");
+	MySQLMsgMeta hellogen(&msc);
+	if (hellogen.AttachMsg(&hello)){
+		cerr << "init meta error ! ret:" << iret << endl;
+		cerr << error_stream.str() << endl;
+		return -2;
+	}
 	string sql;
-	msc.Insert(sql);
+	msc.CreateDB("test_msc", sql);
 	cout << sql << endl;
 
-	msc.Update(sql);
+	msc.DropDB("test_msc", sql);
 	cout << sql << endl;
 
-	msc.Delete(sql);
+	hellogen.CreateTable(sql);
 	cout << sql << endl;
 
-	msc.Replace(sql);
+	hellogen.DropTable(sql);
 	cout << sql << endl;
 
-	msc.Select(sql);
+	hellogen.Insert(sql);
+	cout << sql << endl;
+
+	hellogen.Update(sql);
+	cout << sql << endl;
+
+	hellogen.Delete(sql);
+	cout << sql << endl;
+
+	hellogen.Replace(sql);
+	cout << sql << endl;
+
+	hellogen.Select(sql);
 	cout << sql << endl;
 
 

@@ -27,8 +27,8 @@ message Hello {
     option(m_pks)="id";
 
     optional int32 id = 1[(f_cn)="id",(f_desc)="id"];
-    repeated string myworld = 2[(f_length)="32",(f_count)="32"];
-    repeated int32 roleids = 3[(f_count)="32"];
+    //repeated string myworld = 2[(f_length)="32",(f_count)="32"];
+    //repeated int32 roleids = 3[(f_count)="32"];
     optional HelloD d = 4;
-    repeated HelloD rd = 5[(f_count)="32"];
+    //repeated HelloD rd = 5[(f_count)="32"];
 }

@@ -64,12 +64,12 @@ public:
 		}while (false)
 		////////////////////////////////////////////////////////////////////////////////////
 		//struct Msg {
-		WRITE_LINE("struct %s {", STMessageMetaUtil::GetStructName(desc).c_str());
+		WRITE_LINE("struct %s {", EXTMessageMetaUtil::GetStructName(desc).c_str());
 		level++;
 		std::vector<EXTFieldMeta>	fieldmeta_list;
 
 		EXTMessageMeta	msg_meta;
-		if (msg_meta.ParseFrom(desc)){
+		if (msg_meta.AttachDesc(desc)){
 			throw logic_error("parse error !");
 		}
 
@@ -142,7 +142,7 @@ public:
 		WRITE_LINE("}");
 		///////////////////////////////////////////////////////////////////////////////
 		//bool operator ==  //for find
-		WRITE_LINE("bool\t\toperator == (const %s & rhs_) const {", STMessageMetaUtil::GetStructName(desc).c_str());
+		WRITE_LINE("bool\t\toperator == (const %s & rhs_) const {", EXTMessageMetaUtil::GetStructName(desc).c_str());
 		++level;
 		for (size_t i = 0; i < msg_meta.pks_fields.size(); ++i){
 			string pred_prefix = "";
@@ -194,7 +194,7 @@ public:
 		WRITE_LINE("}");
 
 		//bool operator <  //for less //////////////////////////////////////////
-		WRITE_LINE("bool\t\toperator < (const %s & rhs_) const {", STMessageMetaUtil::GetStructName(desc).c_str());
+		WRITE_LINE("bool\t\toperator < (const %s & rhs_) const {", EXTMessageMetaUtil::GetStructName(desc).c_str());
 		++level;
 		for (size_t i = 0; i < msg_meta.pks_fields.size(); ++i){
 			string pred_prefix = "";

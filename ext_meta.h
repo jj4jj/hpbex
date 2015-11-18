@@ -32,7 +32,7 @@ struct EXTFieldMeta {
 	std::string f_cn;
 	std::string f_desc;
 
-	int			ParseFrom(const google::protobuf::FieldDescriptor * fd);
+	int			AttachDesc(const google::protobuf::FieldDescriptor * fd);
 	std::string GetScalarTypeName();
 	std::string GetTypeName();
 	std::string GetVarName();
@@ -43,7 +43,7 @@ struct EXTFieldMeta {
 
 //todo enumvaluemeta
 
-struct STMessageMetaUtil {
+struct EXTMessageMetaUtil {
 	static std::string GetStructName(const google::protobuf::Descriptor * desc);
 };
 
@@ -59,19 +59,22 @@ struct EXTMessageMeta {
 	std::vector<EXTFieldMeta*>		pks_fields;//if no , then all
 	std::vector<EXTFieldMeta>		sub_fields;
 	std::vector<std::string>		pks_name;
-	int	    ParseFrom(const google::protobuf::Descriptor * desc);
+public:
+	int	    AttachDesc(const google::protobuf::Descriptor * desc);
+	void	construct();
+private:
 	void	ParseSubFields();
 	int		ParsePKS();
 };
 
 
 
-class ProtoMeta {
+class EXTProtoMeta {
 	google::protobuf::compiler::DiskSourceTree * dst;
 	google::protobuf::compiler::Importer *		 importer;
 public:
-	ProtoMeta();
-	~ProtoMeta();
+	EXTProtoMeta();
+	~EXTProtoMeta();
 	int		Init(const char * path, ...);
 	const google::protobuf::FileDescriptor * LoadFile(const char * file);
 	const google::protobuf::DescriptorPool * GetPool();

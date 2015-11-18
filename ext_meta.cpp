@@ -40,7 +40,7 @@ int GetDescOption(string & value,D desc, const string & option){
 #define GET_DESC_INT_OPTION(opt_name, desc)	do{string _value_opt_str;GetDescOption(_value_opt_str, desc, #opt_name);opt_name = std::stoi(_value_opt_str);}while(false)
 	
 
-int	    EXTFieldMeta::ParseFrom(const FieldDescriptor * desc){
+int	    EXTFieldMeta::AttachDesc(const FieldDescriptor * desc){
 	field_desc = desc;
 
 	GET_DESC_STR_OPTION(f_cn, field_desc);
@@ -70,7 +70,7 @@ string EXTFieldMeta::GetScalarTypeName(){
 		return field_desc->enum_type()->name();
 	}
 	else if (field_desc->cpp_type() == FieldDescriptor::CPPTYPE_MESSAGE){
-		return STMessageMetaUtil::GetStructName(field_desc->message_type());
+		return EXTMessageMetaUtil::GetStructName(field_desc->message_type());
 	}
 	return pszTypeName;
 }
@@ -182,16 +182,26 @@ string EXTFieldMeta::GetScalarConvFromMeth(const char * convtomsg_, const string
 	}
 	return meth;
 }
+std::string EXTFieldMeta::GetMysqlFieldType(){
+	return "blob todo";
+}
 
 //////////////////////////////////////////////////////////////////////////
-std::string STMessageMetaUtil::GetStructName(const google::protobuf::Descriptor * desc){
+std::string EXTMessageMetaUtil::GetStructName(const google::protobuf::Descriptor * desc){
 	std::string sname = desc->name();
 	sname += "_ST";
 	return sname;
 }
 
 //////////////////////////////////////////////////////////////////////////
-int	    EXTMessageMeta::ParseFrom(const Descriptor * desc){
+void	EXTMessageMeta::construct(){
+	m_divnum = 0;
+	pks_fields.clear();
+	sub_fields.clear();
+	pks_name.clear();
+}
+
+int	    EXTMessageMeta::AttachDesc(const Descriptor * desc){
 	msg_desc = desc;
 
 	GET_DESC_STR_OPTION(m_pks, msg_desc);
@@ -211,7 +221,7 @@ int	    EXTMessageMeta::ParseFrom(const Descriptor * desc){
 void	EXTMessageMeta::ParseSubFields(){
 	for (int i = 0; i < msg_desc->field_count(); ++i){
 		EXTFieldMeta sfm;
-		sfm.ParseFrom(msg_desc->field(i));
+		sfm.AttachDesc(msg_desc->field(i));
 		sub_fields.push_back(sfm);
 	}
 }
@@ -261,14 +271,14 @@ struct ProtoMetaErrorCollector : google::protobuf::compiler::MultiFileErrorColle
 	}
 };
 
-ProtoMeta::ProtoMeta(){
+EXTProtoMeta::EXTProtoMeta(){
 	dst = new google::protobuf::compiler::DiskSourceTree();
 	dst->MapPath("", "/usr/local/include");
 	dst->MapPath("", "/usr/include");
 	dst->MapPath("", ".");
 	importer = nullptr;
 }
-ProtoMeta::~ProtoMeta(){
+EXTProtoMeta::~EXTProtoMeta(){
 	if (importer){
 		delete importer;
 	}
@@ -276,7 +286,7 @@ ProtoMeta::~ProtoMeta(){
 		delete dst;
 	}
 }
-int		ProtoMeta::Init(const char * path, ...){
+int		EXTProtoMeta::Init(const char * path, ...){
 	if (importer){
 		return -1;
 	}
@@ -291,7 +301,7 @@ int		ProtoMeta::Init(const char * path, ...){
 	importer = new google::protobuf::compiler::Importer(dst, &mfec);
 	return 0;
 }
-const google::protobuf::FileDescriptor * ProtoMeta::LoadFile(const char * file){
+const google::protobuf::FileDescriptor * EXTProtoMeta::LoadFile(const char * file){
 	auto ret = importer->Import(file);
 	if (!ret){
 		cerr << "error import file:" << file << endl;
@@ -299,6 +309,6 @@ const google::protobuf::FileDescriptor * ProtoMeta::LoadFile(const char * file){
 	}
 	return ret;
 }
-const google::protobuf::DescriptorPool * ProtoMeta::GetPool(){
+const google::protobuf::DescriptorPool * EXTProtoMeta::GetPool(){
 	return importer->pool();
 }
