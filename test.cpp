@@ -53,7 +53,8 @@ int main(){
 	}
 	//auto hellogen =	msc.GetMsgDesc("Hello");
 	MySQLMsgMeta hellogen(&msc);
-	if (hellogen.AttachMsg(&hello)){
+	DBHello dhello;
+	if (hellogen.AttachMsg(&dhello)){
 		cerr << "init meta error ! ret:" << iret << endl;
 		cerr << error_stream.str() << endl;
 		return -2;
@@ -64,6 +65,10 @@ int main(){
 
 	msc.DropDB("test_msc", sql);
 	cout << sql << endl;
+
+	msc.CreateTables("DBHello", sql);
+	cout << sql << endl;
+
 
 	hellogen.CreateTable(sql);
 	cout << sql << endl;

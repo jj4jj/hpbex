@@ -17,6 +17,8 @@ namespace google {
 		class FileDescriptor;
 		class DescriptorPool;
 		class Message;
+		class EnumValueDescriptor;
+		class EnumDescriptor;
 
 		namespace compiler {
 			class DiskSourceTree;
@@ -25,12 +27,29 @@ namespace google {
 	}
 }
 //////////////////////////////////////////////////////////////////////////////////////////////
+struct EXTEnumValueMeta {
+	const google::protobuf::EnumValueDescriptor * ev_desc;
+	std::string e_cn;
+	std::string e_desc;
+	int			AttachDesc(const google::protobuf::EnumValueDescriptor * fd);
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+struct EXTEnumMeta {
+	const google::protobuf::EnumDescriptor * ev_desc;
+};
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////
 struct EXTFieldMeta {
 	const google::protobuf::FieldDescriptor * field_desc;
 	std::string f_count;
 	std::string f_length;
 	std::string f_cn;
 	std::string f_desc;
+	//////////////////////////////////
+	int32_t		z_length;
+	int32_t		z_count;
 
 	int			AttachDesc(const google::protobuf::FieldDescriptor * fd);
 	std::string GetScalarTypeName();
@@ -41,10 +60,23 @@ struct EXTFieldMeta {
 	std::string GetMysqlFieldType();
 };
 
-//todo enumvaluemeta
-
-struct EXTMessageMetaUtil {
-	static std::string GetStructName(const google::protobuf::Descriptor * desc);
+struct EXTMetaUtil {
+	static std::string		GetStructName(const google::protobuf::Descriptor * desc);
+	template<class DESC>
+	static int32_t			GetEnumValue(const char * name, DESC desc_){
+		if (!name || !name[0]){
+			return 0;
+		}
+		if (name[0] >= 0 && name[0] <= 9){
+			return atoi(name);
+		}
+		auto f_desc = desc_->file();
+		auto ev_desc = f_desc->FindEnumValueByName(name);
+		if (ev_desc){
+			return ev_desc->number();
+		}
+		return 0;
+	}
 };
 
 struct EXTMessageMeta {

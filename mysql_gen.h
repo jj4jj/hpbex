@@ -8,6 +8,7 @@ struct MySQLMsgMeta {
 	const google::protobuf::Descriptor *	msg_desc;
 	const google::protobuf::Message *		msg;
 	EXTMessageMeta							meta;
+	int32_t									table_idx;
 public:
 	MySQLMsgMeta(MySQLMsgConverter * pCvt);
 	int		AttachMsg(const google::protobuf::Message *		msg);
@@ -22,7 +23,6 @@ public:
 	int				Update(std::string & sql);
 	int				Insert(std::string & sql);
 	int				CreateTable(std::string & sql);
-	int				AlterTable(std::map<std::string, std::string> old_fields_type,std::string & sql);
 	int				DropTable(std::string & sql);
 };
 
@@ -43,6 +43,7 @@ public:
 	int				CreateTables(const char * msg_type, std::string & sql, int idx = -1);
 	int				CreateDB(const char * db_name, std::string & sql);
 	int				DropDB(const char * db_name, std::string & sql);
-
+	//todo
+	int				AlterTables(std::map<std::string, std::string> old_fields_type, std::string & sql);
 	const google::protobuf::Descriptor *	GetMsgDesc(const char * msg_type);
 };

@@ -15,6 +15,7 @@ MySQLMsgMeta::MySQLMsgMeta(MySQLMsgConverter * pCvt):
 void	MySQLMsgMeta::construct(){
 	msg_desc = nullptr;
 	msg = nullptr;
+	table_idx = -1;
 }
 
 int	MySQLMsgMeta::AttachMsg(const google::protobuf::Message *	msg_){
@@ -57,14 +58,16 @@ int	MySQLMsgMeta::AttachMsg(const google::protobuf::Message *	msg_){
 		error_stream << "meta divnum is error :" << meta.m_divnum << endl;
 		return -7;
 	}
+	
+	if (meta.m_divnum > 0){
+		uint64_t ullspkey = atoll(cvt->GetFieldValue(*msg, meta.m_divkey.c_str()).c_str());
+		table_idx = ullspkey % meta.m_divnum;
+	}
+
 	return 0;
 }
 int32_t			MySQLMsgMeta::GetTableIdx(){
-	if (meta.m_divnum <= 0){
-		return -1;
-	}	
-	uint64_t ullspkey = std::stoull(cvt->GetFieldValue(*msg, meta.m_divkey.c_str()));
-	return ullspkey % meta.m_divnum;
+	return table_idx;
 }
 std::string		MySQLMsgMeta::GetTableName(){
 	string tb_name = msg_desc->name();
@@ -83,7 +86,9 @@ int				MySQLMsgMeta::Select(std::string & sql, std::vector<std::string> * fields
 			if (i != 0){
 				sql += ",";
 			}
+			sql += "`";
 			sql += fields->at(i);
+			sql += "`";
 		}
 	}
 	else {
@@ -91,7 +96,9 @@ int				MySQLMsgMeta::Select(std::string & sql, std::vector<std::string> * fields
 			if (i != 0){
 				sql += ",";
 			}
+			sql += "`";
 			sql += msg_desc->field(i)->name();
+			sql += "`";
 		}
 	}
 	sql += " FROM `";
@@ -126,12 +133,14 @@ int				MySQLMsgMeta::Select(std::string & sql, std::vector<std::string> * fields
 				sql += " AND ";
 			}
 			is_first = 1;
-
+			sql += "`";
 			sql += kv.first;
-			sql += "=";
+			sql += "`";
+			sql += " = ";
 			sql += kv.second;
 		}
 	}
+	sql += ";";
 	return 0;
 }
 int		MySQLMsgMeta::Delete(std::string & sql, const char * where_){
@@ -171,10 +180,11 @@ int		MySQLMsgMeta::Delete(std::string & sql, const char * where_){
 			is_first = 1;
 
 			sql += kv.first;
-			sql += "=";
+			sql += " = ";
 			sql += kv.second;
 		}
 	}
+	sql += ";";
 	return 0;
 }
 int		MySQLMsgMeta::Replace(std::string & sql){
@@ -191,7 +201,9 @@ int		MySQLMsgMeta::Replace(std::string & sql){
 		{
 			sql += ",";
 		}
+		sql += "`";
 		sql += kvlist[i].first;
+		sql += "`";
 	}
 	sql += ") VALUES (";
 	//VALUES(vs)
@@ -203,7 +215,7 @@ int		MySQLMsgMeta::Replace(std::string & sql){
 		}
 		sql += kvlist[i].second;
 	}
-	sql += ")";
+	sql += ");";
 	return 0;
 }
 int				MySQLMsgMeta::Update(std::string & sql){
@@ -244,8 +256,8 @@ int				MySQLMsgMeta::Update(std::string & sql){
 		}
 		is_first = 1;
 
-		sql += kv.first;
-		sql += "=";
+		sql += '`' + kv.first + '`';
+		sql += " = ";
 		sql += kv.second;
 	}
 	if (!meta.m_autoinc.empty())
@@ -254,8 +266,8 @@ int				MySQLMsgMeta::Update(std::string & sql){
 		{
 			sql += " , ";
 		}
-		sql += meta.m_autoinc;
-		sql += "=";
+		sql += '`' + meta.m_autoinc + '`';
+		sql += " = ";
 		sql += meta.m_autoinc;
 		sql += "+1";
 	}
@@ -283,10 +295,11 @@ int				MySQLMsgMeta::Update(std::string & sql){
 		}
 		is_first = 1;
 
-		sql += kv.first;
-		sql += "=";
+		sql += '`' + kv.first + '`';
+		sql += " = ";
 		sql += kv.second;
 	}
+	sql += ";";
 	return 0;
 }
 int				MySQLMsgMeta::Insert(std::string & sql){
@@ -304,12 +317,18 @@ int				MySQLMsgMeta::Insert(std::string & sql){
 		{
 			sql += ",";
 		}
+		sql += "`";
 		sql += kvlist[i].first;
+		sql += "`";
 	}
 	if (!meta.m_autoinc.empty())
 	{
-		sql += ",";
+		if (!kvlist.empty()){
+			sql += ",";
+		}
+		sql += "`";
 		sql += meta.m_autoinc;
+		sql += "`";
 	}
 	sql += ") VALUES (";
 	//VALUES(vs)
@@ -326,12 +345,13 @@ int				MySQLMsgMeta::Insert(std::string & sql){
 		sql += ",";
 		sql += "0";
 	}
-	sql += ")";
+	sql += ");";
 	return 0;
 }
 int			MySQLMsgMeta::DropTable(std::string & sql){
-	sql = "DROP TABLE IF EXISTS ";
+	sql = "DROP TABLE IF EXISTS `";
 	sql += GetTableName();
+	sql += "`;";
 	return 0;
 }
 
@@ -522,7 +542,7 @@ int			MySQLMsgConverter::CreateTables(const char * msg_type, std::string & sql,i
 	sql = "CREATE TABLE IF NOT EXISTS `" + table_name + "` (";
 	for (auto & field : meta.sub_fields)
 	{
-		sql += field.field_desc->name() + " " + field.GetMysqlFieldType();
+		sql += "`" + field.field_desc->name() + "` " + field.GetMysqlFieldType();
 		sql += " NOT NULL";
 		sql += ",\n";
 	}
@@ -532,13 +552,15 @@ int			MySQLMsgConverter::CreateTables(const char * msg_type, std::string & sql,i
 		if (!pks.empty()){
 			pks += ",";
 		}
+		pks += "`";
 		pks += pk;
+		pks += "`";
 	}
 	sql += "PRIMARY KEY (";
 	sql += pks + ")\n";
 	sql += ") ENGINE=InnoDB DEFAULT CHARSET utf8 COLLATE utf8_general_ci;";
 	string sql_real = "";
-	if (idx < 0){
+	if (idx < 0 && meta.m_divnum > 0){
 		for (int i = 0; i < meta.m_divnum; ++i){
 			if (i != 0){
 				sql_real += "\n";
@@ -549,18 +571,20 @@ int			MySQLMsgConverter::CreateTables(const char * msg_type, std::string & sql,i
 		}
 		sql = sql_real;
 	}
+	sql += ";";
 	return 0;
 }
 
 int			MySQLMsgConverter::CreateDB(const char * db_name, std::string & sql){
-	sql = "CREATE DATABASE IF NOT EXISTS ";
+	sql = "CREATE DATABASE IF NOT EXISTS `";
 	sql += db_name;
-	sql += " DEFAULT CHARSET utf8 COLLATE utf8_general_ci";
+	sql += "` DEFAULT CHARSET utf8 COLLATE utf8_general_ci;";
 	return 0;
 }
 int			MySQLMsgConverter::DropDB(const char * db_name, std::string & sql){
-	sql = "DROP DATABASE IF EXISTS ";
+	sql = "DROP DATABASE IF EXISTS `";
 	sql += db_name;
+	sql += "`;";
 	return 0;
 }
 
