@@ -77,6 +77,8 @@ int main(){
 	}
 	int buffer_len = dhello.ByteSize();
 	hellogen.msg_desc = msc.GetMsgDesc("DBHello");
+#if 0
+	/*
 	UnknownFieldSet	ufs;
 	if (!ufs.ParseFromArray(buffer_db, buffer_len)){
 		cerr << "unpack error !" << endl;
@@ -87,22 +89,19 @@ int main(){
 	for (int i = 0; i < ufs.field_count(); ++i){
 		cout << i << ":" << ufs.field(i).number() << " -> " << ufs.field(i).type() << endl;
 	}
+	*/
+#endif
 	DynamicMessageFactory	dmf(msc.GetProtoMeta().GetPool());
-	Message * pMsg = dmf.GetPrototype(hellogen.msg_desc);
+	Message * pMsg = dmf.GetPrototype(hellogen.msg_desc)->New();
 
 	cout << "get type name:" << pMsg->GetTypeName() << endl;
-
-	/*
 	if (!pMsg->ParseFromArray(buffer_db, buffer_len)){
 		cerr << "unpack error !" << endl;
 		return -2;
 	}
 	cout << "dyn msg parse from buffer ok !" << endl;
-	*/
-#if 0
-	hellogen.msg = &ufs;
 
-	if (hellogen.AttachMsg(&dhello)){
+	if (hellogen.AttachMsg(pMsg)){
 		cerr << "init meta error ! ret:" << iret << endl;
 		cerr << error_stream.str() << endl;
 		return -2;
@@ -138,7 +137,6 @@ int main(){
 	hellogen.Select(sql);
 	cout << sql << endl;
 
-#endif
 	return 0;
 }
 
