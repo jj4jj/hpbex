@@ -44,7 +44,8 @@ public:
 	MySQLMsgCvt(const std::string & file, st_mysql * pMysql, size_t MAX_FIELD_BUFFER = 1024 * 1024);
 public:
 	std::string		GetFieldValue(const google::protobuf::Message & msg, const char * key);
-	int				GetFieldsSQLKList(const google::protobuf::Message & msg, std::vector<std::pair<std::string, std::string> > & values);
+	int				GetMsgSQLKList(const google::protobuf::Message & msg, std::vector<std::pair<std::string, std::string> > & values);
+	int				GetFieldSQLKV(const google::protobuf::Message & msg, const google::protobuf::FieldDescriptor * pField, std::pair<std::string, std::string> & kv);
 	std::string		GetTableName(const char * msg_type, int idx = -1);
 	std::string		GetMsgTypeNameFromTableName(const std::string & table_name);
 	int				SetFieldValue(google::protobuf::Message & msg,const std::string & key,const char * value, size_t value_length);

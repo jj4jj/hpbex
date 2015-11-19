@@ -63,15 +63,15 @@ struct EXTFieldMeta {
 struct EXTMetaUtil {
 	static std::string		GetStructName(const google::protobuf::Descriptor * desc);
 	template<class DESC>
-	static int32_t			GetEnumValue(const char * name, DESC desc_){
-		if (!name || !name[0]){
+	static int32_t			GetEnumValue(const char * name_or_number, DESC desc_){
+		if (!name_or_number || !name_or_number[0]){
 			return 0;
 		}
-		if (name[0] >= 0 && name[0] <= 9){
-			return atoi(name);
+		if (name_or_number[0] >= '0' && name_or_number[0] <= '9'){
+			return atoi(name_or_number);
 		}
 		auto f_desc = desc_->file();
-		auto ev_desc = f_desc->FindEnumValueByName(name);
+		auto ev_desc = f_desc->FindEnumValueByName(name_or_number);
 		if (ev_desc){
 			return ev_desc->number();
 		}

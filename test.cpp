@@ -68,6 +68,7 @@ int main(){
 	dhello.set_pk1(20555);
 	dhello.set_pk2("86888");
 	dhello.set_b4(true);
+	dhello.mutable_hello()->set_id(20);
 	bzero(buffer_db, sizeof(buffer_db));
 	if (!dhello.SerializeToArray(buffer_db, sizeof(buffer_db))){
 		cerr << "pack error !" << endl;

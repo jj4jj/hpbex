@@ -1,6 +1,8 @@
 #include "mysql_gen.h"
 #include "mysql/mysql.h"
 #include "google/protobuf/compiler/importer.h"
+#include <algorithm>
+#include <functional>
 
 extern std::stringstream error_stream;
 using namespace std;
@@ -59,6 +61,11 @@ int	MySQLMsgMeta::AttachMsg(const google::protobuf::Message *	msg_){
 		return -7;
 	}
 	
+	if (!meta.m_divkey.empty() && !msg_desc->FindFieldByName(meta.m_divkey)){
+		cerr << "msg :" << msg_desc->name() << " div key:" << meta.m_divkey << " not found !" << endl;
+		return -8;
+	}
+
 	if (meta.m_divnum > 0){
 		uint64_t ullspkey = atoll(cvt->GetFieldValue(*msg, meta.m_divkey.c_str()).c_str());
 		table_idx = ullspkey % meta.m_divnum;
@@ -115,7 +122,7 @@ int				MySQLMsgMeta::Select(std::string & sql, std::vector<std::string> * fields
 		int is_first = 0;
 		int is_pk = 0;
 		std::vector<std::pair<std::string, std::string > > kvlist;
-		int ret = cvt->GetFieldsSQLKList(*msg, kvlist);
+		int ret = cvt->GetMsgSQLKList(*msg, kvlist);
 		if (ret) return ret;
 		for (auto & kv : kvlist)
 		{
@@ -160,7 +167,7 @@ int		MySQLMsgMeta::Delete(std::string & sql, const char * where_){
 		int is_first = 0;
 		int is_pk = 0;
 		std::vector<std::pair<std::string, std::string > > kvlist;
-		int ret = cvt->GetFieldsSQLKList(*msg, kvlist);
+		int ret = cvt->GetMsgSQLKList(*msg, kvlist);
 		if (ret) return ret;
 		for (auto & kv : kvlist)
 		{
@@ -197,7 +204,7 @@ int		MySQLMsgMeta::Replace(std::string & sql){
 	sql += GetTableName();
 	sql += "` (";
 	std::vector<std::pair<string, string> > kvlist;
-	int ret = cvt->GetFieldsSQLKList(*msg, kvlist);
+	int ret = cvt->GetMsgSQLKList(*msg, kvlist);
 	if (ret) return ret;
 	for (int i = 0; i < (int)kvlist.size(); ++i)
 	{
@@ -235,7 +242,7 @@ int				MySQLMsgMeta::Update(std::string & sql){
 	sql += GetTableName();
 	sql += "` SET ";
 	std::vector<std::pair<string, string> > kvlist;
-	int ret = cvt->GetFieldsSQLKList(*msg, kvlist);
+	int ret = cvt->GetMsgSQLKList(*msg, kvlist);
 	if (ret) return ret;
 	int is_first = 0;
 	int is_pk = 0;
@@ -313,7 +320,7 @@ int				MySQLMsgMeta::Insert(std::string & sql){
 	sql += GetTableName();
 	sql += "` (";
 	std::vector<std::pair<string, string> > kvlist;
-	int ret = cvt->GetFieldsSQLKList(*msg, kvlist);
+	int ret = cvt->GetMsgSQLKList(*msg, kvlist);
 	if (ret) return ret;
 	for (int i = 0; i < (int)kvlist.size(); ++i)
 	{
@@ -443,10 +450,10 @@ string	MySQLMsgCvt::GetFieldValue(const google::protobuf::Message & msg, const c
 	const Reflection * pReflection = msg.GetReflection();
 	auto msg_desc = msg.GetDescriptor();
 	string lower_case_name = key;
-	std::transform(lower_case_name.begin(), lower_case_name.end(), lower_case_name.begin(), tolower);
+	std::transform(lower_case_name.begin(), lower_case_name.end(), lower_case_name.begin(), ::tolower);
 	const FieldDescriptor * pField = msg_desc->FindFieldByLowercaseName(lower_case_name);
 	if (!pField || pField->is_repeated()){
-		cerr << "not found field (is it a repeat field , get value not support repeat field) :" << key << endl;
+		cerr << "not found field (or is it a repeat field ? get value not support repeat field) :" << key << " lower case name:" << lower_case_name << endl;
 		return "";
 	}
 	switch (pField->cpp_type())
@@ -475,60 +482,61 @@ string	MySQLMsgCvt::GetFieldValue(const google::protobuf::Message & msg, const c
 		return "";
 	}
 }
-int		MySQLMsgCvt::GetFieldKV(const google::protobuf::Message & msg, const FieldDescriptor * pField, std::pair<std::string, std::string> & kv){
+int		MySQLMsgCvt::GetFieldSQLKV(const google::protobuf::Message & msg, const FieldDescriptor * pField, std::pair<std::string, std::string> & kv){
 	kv.first = pField->name();
 	kv.second = "";
-	field_buffer = "";
+	field_buffer[0] = 0;
 	size_t buffer_len = 0;
+	const Reflection * pReflection = msg.GetReflection();
 	switch (pField->cpp_type())
 	{
 	case FieldDescriptor::CPPTYPE_FLOAT:
-		field_buffer.assign(std::to_string(pReflection->GetFloat(msg, pField)));
+		buffer_len = snprintf((char*)field_buffer.data(), field_buffer.capacity(),"%f",pReflection->GetFloat(msg, pField));
 		break;
 	case FieldDescriptor::CPPTYPE_DOUBLE:
-		field_buffer.assign(std::to_string(pReflection->GetDouble(msg, pField)));
+		buffer_len = snprintf((char*)field_buffer.data(), field_buffer.capacity(), "%lf", pReflection->GetDouble(msg, pField));
 		break;
 	case FieldDescriptor::CPPTYPE_INT32:
-		field_buffer.assign(std::to_string(pReflection->GetInt32(msg, pField)));
+		buffer_len = snprintf((char*)field_buffer.data(), field_buffer.capacity(), "%d", pReflection->GetInt32(msg, pField));
 		break;
 	case FieldDescriptor::CPPTYPE_INT64:
-		field_buffer.assign(std::to_string(pReflection->GetInt64(msg, pField)));
+		buffer_len = snprintf((char*)field_buffer.data(), field_buffer.capacity(), "%ld", pReflection->GetInt64(msg, pField));
 		break;
 	case FieldDescriptor::CPPTYPE_UINT32:
-		field_buffer.assign(std::to_string(pReflection->GetUInt32(msg, pField)));
+		buffer_len = snprintf((char*)field_buffer.data(), field_buffer.capacity(), "%u", pReflection->GetUInt32(msg, pField));
 		break;
 	case FieldDescriptor::CPPTYPE_UINT64:
-		field_buffer.assign(std::to_string(pReflection->GetUInt64(msg, pField)));
+		buffer_len = snprintf((char*)field_buffer.data(), field_buffer.capacity(), "%lu", pReflection->GetUInt64(msg, pField));
 		break;
 	case FieldDescriptor::CPPTYPE_ENUM:
-		field_buffer.assign(std::to_string(pReflection->GetEnum(msg, pField)->number()));
+		buffer_len = snprintf((char*)field_buffer.data(), field_buffer.capacity(), "%d", pReflection->GetEnum(msg, pField)->number());
 		break;
 	case FieldDescriptor::CPPTYPE_BOOL:
-		field_buffer.assign(std::to_string(pReflection->GetBool(msg, pField)));
+		buffer_len = snprintf((char*)field_buffer.data(), field_buffer.capacity(), "%d", pReflection->GetBool(msg, pField)?1:0);
 		break;
 	case FieldDescriptor::CPPTYPE_STRING:
-		field_buffer.assign(pReflection->GetString(msg, pField));
+		buffer_len = snprintf((char*)field_buffer.data(), field_buffer.capacity(), "%s", pReflection->GetString(msg, pField).c_str());
 		break;
 	case FieldDescriptor::CPPTYPE_MESSAGE:
 		if (pReflection->HasField(msg, pField)){
 			const Message & _tmpmsg = pReflection->GetMessage(msg, pField);
-			_tmpmsg.SerializeToArray((char*)field_buffer.data(), field_buffer.capacity());
-			buffer_len = _tmpmsg.ByteSize();
+			if (!_tmpmsg.SerializeToArray((char*)field_buffer.data() + 1, field_buffer.capacity() - 2)){
+				cerr << "pack error ! field:" << pField->name() << " field buffer capacity:" << (int)(field_buffer.capacity() - 2) << " need :" << _tmpmsg.ByteSize() << endl;
+				return -1;
+			}
+			*((char*)field_buffer.data()) = '\'';
+			*((char*)field_buffer.data() + 1 + _tmpmsg.ByteSize()) = '\'';
+			buffer_len = _tmpmsg.ByteSize() + 2;
 		}
 		break;
 	default:
-		return -1;
+		cerr << "unkown type ! field:" << pField->name() << " type: " << pField->cpp_type() << endl;
+		return -2;
 	}
 	if (buffer_len == 0){
-		if (field_buffer.empty()){
-			if (pField->cpp_type() <= FieldDescriptor::CPPTYPE_ENUM){
-				field_buffer = "0"; //not us
-			}
-			else { //string or message
-				field_buffer = "''";
-			}
-		}
-		buffer_len = field_buffer.length();
+		*((char*)field_buffer.data()) = '\'';
+		*((char*)field_buffer.data() + 1) = '\'';
+		buffer_len = 2;
 	}
 	//need escape
 	if (mysql){
@@ -536,17 +544,17 @@ int		MySQLMsgCvt::GetFieldKV(const google::protobuf::Message & msg, const FieldD
 		bzero((char*)escaped_buffer.data() + buffer_len,
 			buffer_len + 1); //
 		mysql_real_escape_string(mysql, (char*)&escaped_buffer[1], buffer_msg, buffer_len);
-		kv.second = escaped_buffer.data();
+		kv.second.assign(escaped_buffer.data());
 	}
 	else {
-		kv.second = field_buffer;
+		kv.second.assign(field_buffer.data(), buffer_len);
 	}
+	return 0;
 }
 
-int		MySQLMsgCvt::GetFieldsSQLKList(const google::protobuf::Message & msg, std::vector<std::pair<string, string> > & values)
+int		MySQLMsgCvt::GetMsgSQLKList(const google::protobuf::Message & msg, std::vector<std::pair<string, string> > & values)
 {
 	values.clear();
-	const Reflection * pReflection = msg.GetReflection();
 	auto msg_desc = msg.GetDescriptor();
 	for (int i = 0; i < msg_desc->field_count(); ++i)
 	{
@@ -556,18 +564,16 @@ int		MySQLMsgCvt::GetFieldsSQLKList(const google::protobuf::Message & msg, std::
 		}
 		std::pair<std::string, std::string> kv;
 		if (pField->is_repeated()){
-			//unfold
-			kv.first = pField->name() + "_num";
-			kv.second = to_string(count);
-
-			GetRepeatFieldKV(msg, pField, i, kv);
+			//unfold ? no need support
+			cerr << "no support a repeated field !" << pField->name() << " type:" << msg.GetTypeName() << endl;
+			return -1;
 		}
 		else {
-			GetFieldKV(msg, pField, kv);
+			if (GetFieldSQLKV(msg, pField, kv)){
+				cerr << "get field kv error ! field name:" << pField->name() << " type:" << msg.GetTypeName() << endl;
+				return -2;
+			}
 		}
-		
-		
-
 		values.push_back(kv);
 	}
 	return 0;

@@ -27,7 +27,7 @@ message Hello {
     option(m_pks)="id";
 
     optional int32 id = 1[(f_cn)="id",(f_desc)="id"];
-    //repeated string myworld = 2[(f_length)="32",(f_count)="32"];
+    repeated string myworld = 2[(f_length)="32",(f_count)="32"];
     //repeated int32 roleids = 3[(f_count)="32"];
     optional HelloD d = 4;
     //repeated HelloD rd = 5[(f_count)="32"];
@@ -40,7 +40,7 @@ enum EnumDef_value {
 }
 message DBHello {
 	option(m_pks) = "pk1,pk2";
-	option(m_divkey) = "32";
+	option(m_divkey) = "pk1";
 	option(m_divnum) = 100;
 	
 	required uint64 pk1 = 1;

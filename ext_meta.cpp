@@ -31,7 +31,7 @@ int GetDescOption(string & value,D desc, const string & option){
 	if (!value.empty()) {
 		return 0;
 	}
-	error_stream << "not found the option:(" << option.c_str() << ") in desc:" << desc->name() << endl;
+	error_stream << "info: not found the option:(" << option.c_str() << ") in desc:" << desc->name() << endl;
 	return -1;
 }
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -60,13 +60,13 @@ int	    EXTFieldMeta::AttachDesc(const FieldDescriptor * desc){
 	if (desc->is_repeated()){
 		//cout > 0
 		if (z_count <= 0){
-			error_stream << "the field:" << desc->name() << " in message:" << desc->type_name() << " is a repeat , but not found options [count] or count error value:" << z_count << endl;
+			error_stream << "the field:" << desc->name() << " in message:" << desc->type_name() << " is a repeat , but not found options [f_count:"<< f_count <<"] or count error value:" << z_count << endl;
 			return -1;
 		}
 	}
 	if (desc->cpp_type() == FieldDescriptor::CPPTYPE_STRING){
 		if (f_length.empty()){
-			error_stream << "the field:" << desc->name() << " in message:" << desc->type_name() << " is a string , but not found options [length] or length error value:"<< z_length << endl;
+			error_stream << "the field:" << desc->name() << " in message:" << desc->type_name() << " is a string , but not found options [f_length:" << f_length << "] or length error value:" << z_length << endl;
 			return -2;
 		}
 	}
