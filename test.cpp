@@ -44,7 +44,7 @@ int main(){
 #endif
 
 	Hello hello;
-	MySQLMsgConverter	msc("test.proto", nullptr);
+	MySQLMsgCvt	msc("test.proto", nullptr);
 	int iret = msc.InitSchema();
 	if (iret){
 		cerr << "init schama error ! ret:" << iret << endl;

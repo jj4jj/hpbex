@@ -2,15 +2,15 @@
 #include "ext_meta.h"
 #include <map>
 struct st_mysql;
-class MySQLMsgConverter;
+class MySQLMsgCvt;
 struct MySQLMsgMeta {
-	MySQLMsgConverter	*					cvt;
+	MySQLMsgCvt	*					cvt;
 	const google::protobuf::Descriptor *	msg_desc;
 	const google::protobuf::Message *		msg;
 	EXTMessageMeta							meta;
 	int32_t									table_idx;
 public:
-	MySQLMsgMeta(MySQLMsgConverter * pCvt);
+	MySQLMsgMeta(MySQLMsgCvt * pCvt);
 	int		AttachMsg(const google::protobuf::Message *		msg);
 private:
 	void	construct();
@@ -34,14 +34,14 @@ struct MySQLRow {
 	unsigned long *		row_lengths;
 };
 
-class MySQLMsgConverter {
+class MySQLMsgCvt {
 	std::string			meta_file;
 	st_mysql *			mysql;
 	std::string			field_buffer;
 	std::string			escaped_buffer;
 	EXTProtoMeta		protometa; //dynloading
 public:
-	MySQLMsgConverter(const std::string & file, st_mysql * pMysql, size_t MAX_FIELD_BUFFER = 1024 * 1024);
+	MySQLMsgCvt(const std::string & file, st_mysql * pMysql, size_t MAX_FIELD_BUFFER = 1024 * 1024);
 public:
 	std::string		GetFieldValue(const google::protobuf::Message & msg, const char * key);
 	int				GetFieldsSQLKList(const google::protobuf::Message & msg, std::vector<std::pair<std::string, std::string> > & values);

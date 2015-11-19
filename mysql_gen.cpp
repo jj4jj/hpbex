@@ -9,7 +9,7 @@ using namespace google::protobuf;
 
 
 
-MySQLMsgMeta::MySQLMsgMeta(MySQLMsgConverter * pCvt):
+MySQLMsgMeta::MySQLMsgMeta(MySQLMsgCvt * pCvt):
 			cvt(pCvt),msg_desc(nullptr),msg(nullptr){
 }
 void	MySQLMsgMeta::construct(){
@@ -361,12 +361,12 @@ int			MySQLMsgMeta::CreateTable(std::string & sql){
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 
-MySQLMsgConverter::MySQLMsgConverter(const string & file, st_mysql * pMysql, size_t MAX_FIELD_BUFFER) :meta_file(file), mysql(pMysql){
+MySQLMsgCvt::MySQLMsgCvt(const string & file, st_mysql * pMysql, size_t MAX_FIELD_BUFFER) :meta_file(file), mysql(pMysql){
 	field_buffer.reserve(MAX_FIELD_BUFFER);//1MB
 	escaped_buffer.reserve(MAX_FIELD_BUFFER * 2 + 1);
 }
 
-int		MySQLMsgConverter::SetFieldValue(google::protobuf::Message & msg, const std::string & key, const char * value, size_t value_length){
+int		MySQLMsgCvt::SetFieldValue(google::protobuf::Message & msg, const std::string & key, const char * value, size_t value_length){
 	const Reflection * pReflection = msg.GetReflection();
 	auto msg_desc = msg.GetDescriptor();
 	for (int i = 0; i < msg_desc->field_count(); ++i){
@@ -435,7 +435,7 @@ int		MySQLMsgConverter::SetFieldValue(google::protobuf::Message & msg, const std
 	cerr << "not found field in meta desc key:" << key << " msg type:" << msg_desc->name() << endl;
 	return 0;
 }
-string	MySQLMsgConverter::GetFieldValue(const google::protobuf::Message & msg, const char * key){
+string	MySQLMsgCvt::GetFieldValue(const google::protobuf::Message & msg, const char * key){
 	const Reflection * pReflection = msg.GetReflection();
 	auto msg_desc = msg.GetDescriptor();
 	for (int i = 0; i < msg_desc->field_count(); ++i){
@@ -471,7 +471,7 @@ string	MySQLMsgConverter::GetFieldValue(const google::protobuf::Message & msg, c
 	}
 	return "";
 }
-int		MySQLMsgConverter::GetFieldsSQLKList(const google::protobuf::Message & msg, std::vector<std::pair<string, string> > & values)
+int		MySQLMsgCvt::GetFieldsSQLKList(const google::protobuf::Message & msg, std::vector<std::pair<string, string> > & values)
 {
 	values.clear();
 	const Reflection * pReflection = msg.GetReflection();
@@ -553,7 +553,7 @@ int		MySQLMsgConverter::GetFieldsSQLKList(const google::protobuf::Message & msg,
 	}
 	return 0;
 }
-int		MySQLMsgConverter::InitSchema(){
+int		MySQLMsgCvt::InitSchema(){
 	if (protometa.Init(nullptr)){
 		error_stream << "proto meta init error !" << endl;
 		return -1;
@@ -565,7 +565,7 @@ int		MySQLMsgConverter::InitSchema(){
 	return 0;
 }
 #define TABLE_NAME_POSTFIX		("_")
-std::string		MySQLMsgConverter::GetMsgTypeNameFromTableName(const std::string & table_name){
+std::string		MySQLMsgCvt::GetMsgTypeNameFromTableName(const std::string & table_name){
 	string::size_type deli = table_name.find_last_of(TABLE_NAME_POSTFIX);
 	if (deli == string::npos){
 		return table_name;
@@ -574,7 +574,7 @@ std::string		MySQLMsgConverter::GetMsgTypeNameFromTableName(const std::string & 
 		return table_name.substr(0, deli);
 	}
 }
-string		MySQLMsgConverter::GetTableName(const char * msg_type, int idx){
+string		MySQLMsgCvt::GetTableName(const char * msg_type, int idx){
 	string tbname = msg_type;
 	if (idx >= 0){
 		tbname += TABLE_NAME_POSTFIX;
@@ -582,7 +582,7 @@ string		MySQLMsgConverter::GetTableName(const char * msg_type, int idx){
 	}
 	return tbname;
 }
-int			MySQLMsgConverter::CreateTables(const char * msg_type, std::string & sql,int idx ){
+int			MySQLMsgCvt::CreateTables(const char * msg_type, std::string & sql,int idx ){
 	auto msg_desc = protometa.GetMsgDesc(msg_type);
 	if (!msg_desc){
 		return -1;
@@ -629,20 +629,20 @@ int			MySQLMsgConverter::CreateTables(const char * msg_type, std::string & sql,i
 	return 0;
 }
 
-int			MySQLMsgConverter::CreateDB(const char * db_name, std::string & sql){
+int			MySQLMsgCvt::CreateDB(const char * db_name, std::string & sql){
 	sql = "CREATE DATABASE IF NOT EXISTS `";
 	sql += db_name;
 	sql += "` DEFAULT CHARSET utf8 COLLATE utf8_general_ci;";
 	return 0;
 }
-int			MySQLMsgConverter::DropDB(const char * db_name, std::string & sql){
+int			MySQLMsgCvt::DropDB(const char * db_name, std::string & sql){
 	sql = "DROP DATABASE IF EXISTS `";
 	sql += db_name;
 	sql += "`;";
 	return 0;
 }
 
-int			MySQLMsgConverter::GetMsgBufferFromMySQLRow(char * buffer, int * buffer_len, const MySQLRow &  sql_row){
+int			MySQLMsgCvt::GetMsgBufferFromMySQLRow(char * buffer, int * buffer_len, const MySQLRow &  sql_row){
 
 	if (sql_row.num_fields <= 0){
 		//error number fields

@@ -2,6 +2,7 @@
 
 #include "test.pb.h"
 #include <iostream>
+#include <stdio.h>
 #include "extensions_option.h"
 
 extern std::stringstream error_stream;
@@ -14,7 +15,9 @@ int main(){
 
 	Hello hello;
 
-	
+    const char * ptext = "heelofffffffffffxfsfd";
+    string cs = ptext;
+    printf("%p %p\n", ptext, cs.data());
 	const Descriptor * dp = hello.GetDescriptor();
 	/*
 	if (dp->options().HasExtension(pks)){
