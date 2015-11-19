@@ -103,11 +103,15 @@ int				MySQLMsgMeta::Select(std::string & sql, std::vector<std::string> * fields
 	}
 	sql += " FROM `";
 	sql += GetTableName();
-	sql += "` WHERE ";
+	sql += "` ";
 	if (where_){
-		sql += where_;
+		if (where_[0]){
+			sql += " WHERE ";
+			sql += where_;
+		}
 	}
 	else {
+		sql += " WHERE ";
 		int is_first = 0;
 		int is_pk = 0;
 		std::vector<std::pair<std::string, std::string > > kvlist;
@@ -438,39 +442,107 @@ int		MySQLMsgCvt::SetFieldValue(google::protobuf::Message & msg, const std::stri
 string	MySQLMsgCvt::GetFieldValue(const google::protobuf::Message & msg, const char * key){
 	const Reflection * pReflection = msg.GetReflection();
 	auto msg_desc = msg.GetDescriptor();
-	for (int i = 0; i < msg_desc->field_count(); ++i){
-		const FieldDescriptor * pField = msg_desc->field(i);
-		if (!pField || pField->name() != key){
-			continue;
-		}
-		switch (pField->cpp_type())
-		{
-		case FieldDescriptor::CPPTYPE_FLOAT:
-			return std::to_string(pReflection->GetFloat(msg, pField));
-		case FieldDescriptor::CPPTYPE_DOUBLE:
-			return std::to_string(pReflection->GetDouble(msg, pField));
-		case FieldDescriptor::CPPTYPE_INT32:
-			return std::to_string(pReflection->GetInt32(msg, pField));
-		case FieldDescriptor::CPPTYPE_INT64:
-			return std::to_string(pReflection->GetInt64(msg, pField));
-		case FieldDescriptor::CPPTYPE_UINT32:
-			return std::to_string(pReflection->GetUInt32(msg, pField));
-		case FieldDescriptor::CPPTYPE_UINT64:
-			return std::to_string(pReflection->GetUInt64(msg, pField));
-		case FieldDescriptor::CPPTYPE_ENUM:
-			return std::to_string(pReflection->GetEnum(msg, pField)->number());
-		case FieldDescriptor::CPPTYPE_BOOL:
-			return std::to_string(pReflection->GetBool(msg, pField));
-		case FieldDescriptor::CPPTYPE_STRING:
-			return pReflection->GetString(msg, pField);
-		case FieldDescriptor::CPPTYPE_MESSAGE:
-			return "";
-		default:
-			return "";
-		}
+	string lower_case_name = key;
+	std::transform(lower_case_name.begin(), lower_case_name.end(), lower_case_name.begin(), tolower);
+	const FieldDescriptor * pField = msg_desc->FindFieldByLowercaseName(lower_case_name);
+	if (!pField || pField->is_repeated()){
+		cerr << "not found field (is it a repeat field , get value not support repeat field) :" << key << endl;
+		return "";
 	}
-	return "";
+	switch (pField->cpp_type())
+	{
+	case FieldDescriptor::CPPTYPE_FLOAT:
+		return std::to_string(pReflection->GetFloat(msg, pField));
+	case FieldDescriptor::CPPTYPE_DOUBLE:
+		return std::to_string(pReflection->GetDouble(msg, pField));
+	case FieldDescriptor::CPPTYPE_INT32:
+		return std::to_string(pReflection->GetInt32(msg, pField));
+	case FieldDescriptor::CPPTYPE_INT64:
+		return std::to_string(pReflection->GetInt64(msg, pField));
+	case FieldDescriptor::CPPTYPE_UINT32:
+		return std::to_string(pReflection->GetUInt32(msg, pField));
+	case FieldDescriptor::CPPTYPE_UINT64:
+		return std::to_string(pReflection->GetUInt64(msg, pField));
+	case FieldDescriptor::CPPTYPE_ENUM:
+		return std::to_string(pReflection->GetEnum(msg, pField)->number());
+	case FieldDescriptor::CPPTYPE_BOOL:
+		return std::to_string(pReflection->GetBool(msg, pField));
+	case FieldDescriptor::CPPTYPE_STRING:
+		return pReflection->GetString(msg, pField);
+	case FieldDescriptor::CPPTYPE_MESSAGE:
+	default:
+		cerr << "get value not support repeat field or message field:" << lower_case_name << " type:" << pField->type_name() << endl;
+		return "";
+	}
 }
+int		MySQLMsgCvt::GetFieldKV(const google::protobuf::Message & msg, const FieldDescriptor * pField, std::pair<std::string, std::string> & kv){
+	kv.first = pField->name();
+	kv.second = "";
+	field_buffer = "";
+	size_t buffer_len = 0;
+	switch (pField->cpp_type())
+	{
+	case FieldDescriptor::CPPTYPE_FLOAT:
+		field_buffer.assign(std::to_string(pReflection->GetFloat(msg, pField)));
+		break;
+	case FieldDescriptor::CPPTYPE_DOUBLE:
+		field_buffer.assign(std::to_string(pReflection->GetDouble(msg, pField)));
+		break;
+	case FieldDescriptor::CPPTYPE_INT32:
+		field_buffer.assign(std::to_string(pReflection->GetInt32(msg, pField)));
+		break;
+	case FieldDescriptor::CPPTYPE_INT64:
+		field_buffer.assign(std::to_string(pReflection->GetInt64(msg, pField)));
+		break;
+	case FieldDescriptor::CPPTYPE_UINT32:
+		field_buffer.assign(std::to_string(pReflection->GetUInt32(msg, pField)));
+		break;
+	case FieldDescriptor::CPPTYPE_UINT64:
+		field_buffer.assign(std::to_string(pReflection->GetUInt64(msg, pField)));
+		break;
+	case FieldDescriptor::CPPTYPE_ENUM:
+		field_buffer.assign(std::to_string(pReflection->GetEnum(msg, pField)->number()));
+		break;
+	case FieldDescriptor::CPPTYPE_BOOL:
+		field_buffer.assign(std::to_string(pReflection->GetBool(msg, pField)));
+		break;
+	case FieldDescriptor::CPPTYPE_STRING:
+		field_buffer.assign(pReflection->GetString(msg, pField));
+		break;
+	case FieldDescriptor::CPPTYPE_MESSAGE:
+		if (pReflection->HasField(msg, pField)){
+			const Message & _tmpmsg = pReflection->GetMessage(msg, pField);
+			_tmpmsg.SerializeToArray((char*)field_buffer.data(), field_buffer.capacity());
+			buffer_len = _tmpmsg.ByteSize();
+		}
+		break;
+	default:
+		return -1;
+	}
+	if (buffer_len == 0){
+		if (field_buffer.empty()){
+			if (pField->cpp_type() <= FieldDescriptor::CPPTYPE_ENUM){
+				field_buffer = "0"; //not us
+			}
+			else { //string or message
+				field_buffer = "''";
+			}
+		}
+		buffer_len = field_buffer.length();
+	}
+	//need escape
+	if (mysql){
+		char * buffer_msg = (char*)field_buffer.data();
+		bzero((char*)escaped_buffer.data() + buffer_len,
+			buffer_len + 1); //
+		mysql_real_escape_string(mysql, (char*)&escaped_buffer[1], buffer_msg, buffer_len);
+		kv.second = escaped_buffer.data();
+	}
+	else {
+		kv.second = field_buffer;
+	}
+}
+
 int		MySQLMsgCvt::GetFieldsSQLKList(const google::protobuf::Message & msg, std::vector<std::pair<string, string> > & values)
 {
 	values.clear();
@@ -483,71 +555,18 @@ int		MySQLMsgCvt::GetFieldsSQLKList(const google::protobuf::Message & msg, std::
 			continue;
 		}
 		std::pair<std::string, std::string> kv;
-		kv.first = pField->name();
-		kv.second = "";
-		field_buffer = "";
-		size_t buffer_len = 0;
-		switch (pField->cpp_type())
-		{
-		case FieldDescriptor::CPPTYPE_FLOAT:
-			field_buffer.assign(std::to_string(pReflection->GetFloat(msg, pField)));
-			break;
-		case FieldDescriptor::CPPTYPE_DOUBLE:
-			field_buffer.assign(std::to_string(pReflection->GetDouble(msg, pField)));
-			break;
-		case FieldDescriptor::CPPTYPE_INT32:
-			field_buffer.assign(std::to_string(pReflection->GetInt32(msg, pField)));
-			break;
-		case FieldDescriptor::CPPTYPE_INT64:
-			field_buffer.assign(std::to_string(pReflection->GetInt64(msg, pField)));
-			break;
-		case FieldDescriptor::CPPTYPE_UINT32:
-			field_buffer.assign(std::to_string(pReflection->GetUInt32(msg, pField)));
-			break;
-		case FieldDescriptor::CPPTYPE_UINT64:
-			field_buffer.assign(std::to_string(pReflection->GetUInt64(msg, pField)));
-			break;
-		case FieldDescriptor::CPPTYPE_ENUM:
-			field_buffer.assign(std::to_string(pReflection->GetEnum(msg, pField)->number()));
-			break;
-		case FieldDescriptor::CPPTYPE_BOOL:
-			field_buffer.assign(std::to_string(pReflection->GetBool(msg, pField)));
-			break;
-		case FieldDescriptor::CPPTYPE_STRING:
-			field_buffer.assign(pReflection->GetString(msg, pField));
-			break;
-		case FieldDescriptor::CPPTYPE_MESSAGE:
-			if (pReflection->HasField(msg, pField)){
-				const Message & _tmpmsg = pReflection->GetMessage(msg, pField);
-				_tmpmsg.SerializeToArray((char*)field_buffer.data(), field_buffer.capacity());
-				buffer_len = _tmpmsg.ByteSize();
-			}
-			break;
-		default:
-			return -1;
-		}
-		if (buffer_len == 0){
-			if (field_buffer.empty()){
-				if (pField->cpp_type() <= FieldDescriptor::CPPTYPE_ENUM){
-					field_buffer = "0"; //not us
-				}
-				else { //string or message
-					field_buffer = "''";
-				}
-			}
-			buffer_len = field_buffer.length();
-		}
-		//need escape
-		if (mysql){
-			char * buffer_msg = (char*)field_buffer.data();
-			bzero((char*)escaped_buffer.data() + buffer_len,
-				buffer_len + 1); //
-			mysql_real_escape_string(mysql, (char*)&escaped_buffer[1], buffer_msg, buffer_len);
-			kv.second = escaped_buffer.data();
+		if (pField->is_repeated()){
+			//unfold
+			kv.first = pField->name() + "_num";
+			kv.second = to_string(count);
+
+			GetRepeatFieldKV(msg, pField, i, kv);
 		}
 		else {
-			kv.second = field_buffer;
+			GetFieldKV(msg, pField, kv);
 		}
+		
+		
 
 		values.push_back(kv);
 	}

@@ -117,7 +117,7 @@ int main(){
 	hellogen.Replace(sql);
 	cout << sql << endl;
 
-	hellogen.Select(sql);
+	hellogen.Select(sql, nullptr, "");
 	cout << sql << endl;
 
 	return 0;
