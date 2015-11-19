@@ -19,7 +19,7 @@ namespace google {
 		class Message;
 		class EnumValueDescriptor;
 		class EnumDescriptor;
-
+		class DynamicMessageFactory;
 		namespace compiler {
 			class DiskSourceTree;
 			class Importer;
@@ -99,16 +99,18 @@ private:
 	int		ParsePKS();
 };
 
-
-
 class EXTProtoMeta {
 	google::protobuf::compiler::DiskSourceTree * dst;
 	google::protobuf::compiler::Importer *		 importer;
+	google::protobuf::DynamicMessageFactory	*	 dyn_msg_factory;
 public:
 	EXTProtoMeta();
 	~EXTProtoMeta();
 	int		Init(const char * path, ...);
 	const google::protobuf::FileDescriptor * LoadFile(const char * file);
 	const google::protobuf::DescriptorPool * GetPool();
+	const google::protobuf::Descriptor *	 GetMsgDesc(const char * msg_type);
+	google::protobuf::Message	*			 NewDynMessage(const char * msg_type, const char * buffer = 0, size_t buffer_len = 0);	
+	void									 FreeDynMessage(google::protobuf::Message * msg);
 
 };

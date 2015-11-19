@@ -365,6 +365,43 @@ MySQLMsgConverter::MySQLMsgConverter(const string & file, st_mysql * pMysql, siz
 	field_buffer.reserve(MAX_FIELD_BUFFER);//1MB
 	escaped_buffer.reserve(MAX_FIELD_BUFFER * 2 + 1);
 }
+
+int		MySQLMsgConverter::SetFieldValue(google::protobuf::Message & msg, const char * key, const char * value, size_t value_length){
+	const Reflection * pReflection = msg.GetReflection();
+	auto msg_desc = msg.GetDescriptor();
+	for (int i = 0; i < msg_desc->field_count(); ++i){
+		const FieldDescriptor * pField = msg_desc->field(i);
+		if (!pField || pField->name() != key){
+			continue;
+		}
+		switch (pField->cpp_type())
+		{
+		case FieldDescriptor::CPPTYPE_FLOAT:
+			return std::to_string(pReflection->GetFloat(msg, pField));
+		case FieldDescriptor::CPPTYPE_DOUBLE:
+			return std::to_string(pReflection->GetDouble(msg, pField));
+		case FieldDescriptor::CPPTYPE_INT32:
+			return std::to_string(pReflection->GetInt32(msg, pField));
+		case FieldDescriptor::CPPTYPE_INT64:
+			return std::to_string(pReflection->GetInt64(msg, pField));
+		case FieldDescriptor::CPPTYPE_UINT32:
+			return std::to_string(pReflection->GetUInt32(msg, pField));
+		case FieldDescriptor::CPPTYPE_UINT64:
+			return std::to_string(pReflection->GetUInt64(msg, pField));
+		case FieldDescriptor::CPPTYPE_ENUM:
+			return std::to_string(pReflection->GetEnum(msg, pField)->number());
+		case FieldDescriptor::CPPTYPE_BOOL:
+			return std::to_string(pReflection->GetBool(msg, pField));
+		case FieldDescriptor::CPPTYPE_STRING:
+			return pReflection->GetString(msg, pField);
+		case FieldDescriptor::CPPTYPE_MESSAGE:
+			return "";
+		default:
+			return "";
+		}
+	}
+	return "";
+}
 string	MySQLMsgConverter::GetFieldValue(const google::protobuf::Message & msg, const char * key){
 	const Reflection * pReflection = msg.GetReflection();
 	auto msg_desc = msg.GetDescriptor();
@@ -420,49 +457,31 @@ int		MySQLMsgConverter::GetFieldsSQLKList(const google::protobuf::Message & msg,
 		switch (pField->cpp_type())
 		{
 		case FieldDescriptor::CPPTYPE_FLOAT:
-			if (pReflection->HasField(msg, pField)){
-				field_buffer.assign(std::to_string(pReflection->GetFloat(msg, pField)));
-			}
+			field_buffer.assign(std::to_string(pReflection->GetFloat(msg, pField)));
 			break;
 		case FieldDescriptor::CPPTYPE_DOUBLE:
-			if (pReflection->HasField(msg, pField)){
-				field_buffer.assign(std::to_string(pReflection->GetDouble(msg, pField)));
-			}
+			field_buffer.assign(std::to_string(pReflection->GetDouble(msg, pField)));
 			break;
 		case FieldDescriptor::CPPTYPE_INT32:
-			if (pReflection->HasField(msg, pField)){
-				field_buffer.assign(std::to_string(pReflection->GetInt32(msg, pField)));
-			}
+			field_buffer.assign(std::to_string(pReflection->GetInt32(msg, pField)));
 			break;
 		case FieldDescriptor::CPPTYPE_INT64:
-			if (pReflection->HasField(msg, pField)){
-				field_buffer.assign(std::to_string(pReflection->GetInt64(msg, pField)));
-			}
+			field_buffer.assign(std::to_string(pReflection->GetInt64(msg, pField)));
 			break;
 		case FieldDescriptor::CPPTYPE_UINT32:
-			if (pReflection->HasField(msg, pField)){
-				field_buffer.assign(std::to_string(pReflection->GetUInt32(msg, pField)));
-			}
+			field_buffer.assign(std::to_string(pReflection->GetUInt32(msg, pField)));
 			break;
 		case FieldDescriptor::CPPTYPE_UINT64:
-			if (pReflection->HasField(msg, pField)){
-				field_buffer.assign(std::to_string(pReflection->GetUInt64(msg, pField)));
-			}
+			field_buffer.assign(std::to_string(pReflection->GetUInt64(msg, pField)));
 			break;
 		case FieldDescriptor::CPPTYPE_ENUM:
-			if (pReflection->HasField(msg, pField)){
-				field_buffer.assign(std::to_string(pReflection->GetEnum(msg, pField)->number()));
-			}
+			field_buffer.assign(std::to_string(pReflection->GetEnum(msg, pField)->number()));
 			break;
 		case FieldDescriptor::CPPTYPE_BOOL:
-			if (pReflection->HasField(msg, pField)){
-				field_buffer.assign(std::to_string(pReflection->GetBool(msg, pField)));
-			}
+			field_buffer.assign(std::to_string(pReflection->GetBool(msg, pField)));
 			break;
 		case FieldDescriptor::CPPTYPE_STRING:
-			if (pReflection->HasField(msg, pField)){
-				field_buffer.assign(pReflection->GetString(msg, pField));
-			}
+			field_buffer.assign(pReflection->GetString(msg, pField));
 			break;
 		case FieldDescriptor::CPPTYPE_MESSAGE:
 			if (pReflection->HasField(msg, pField)){
@@ -521,7 +540,7 @@ string		MySQLMsgConverter::GetTableName(const char * msg_type, int idx){
 	return tbname;
 }
 int			MySQLMsgConverter::CreateTables(const char * msg_type, std::string & sql,int idx ){
-	auto msg_desc = GetMsgDesc(msg_type);
+	auto msg_desc = protometa.GetMsgDesc(msg_type);
 	if (!msg_desc){
 		return -1;
 	}
@@ -581,6 +600,21 @@ int			MySQLMsgConverter::DropDB(const char * db_name, std::string & sql){
 }
 
 
-const Descriptor * MySQLMsgConverter::GetMsgDesc(const char * msg_type){
-	return protometa.GetPool()->FindMessageTypeByName(msg_type);
+
+int			MySQLMsgConverter::GetMsgBufferFromMySQLRow(const char * msg_type, char * buffer, int * buffer_len, const MySQLRow &  sql_row){
+	Message * pMsg = protometa.NewDynMessage(msg_type);
+	if (!pMsg){
+		return -1;
+	}
+	int ret = 0;
+	for (int i = 0; i < sql_row.num_fields; ++i){		
+		ret = SetFieldValue(*pMsg,
+			sql_row.res_fields[i].name,
+			sql_row.row[i],
+			sql_row.row_lengths[i]));
+		if (ret){
+			return -1 + ret;
+		}
+	}
+	return 0;
 }

@@ -27,8 +27,12 @@ public:
 };
 
 
-
-
+struct MySQLRow {
+	MYSQL_FIELD *    res_fields;
+	int				 num_fields;
+	MYSQL_ROW		 row;
+	unsigned long *  row_lengths;
+};
 
 class MySQLMsgConverter {
 	std::string			meta_file;
@@ -42,13 +46,16 @@ public:
 	std::string		GetFieldValue(const google::protobuf::Message & msg, const char * key);
 	int				GetFieldsSQLKList(const google::protobuf::Message & msg, std::vector<std::pair<std::string, std::string> > & values);
 	std::string		GetTableName(const char * msg_type, int idx = -1);
+	int				SetFieldValue(google::protobuf::Message & msg, const char * key,const char * value, size_t value_length);
 public:
 	int				InitSchema();
 	int				CreateTables(const char * msg_type, std::string & sql, int idx = -1);
 	int				CreateDB(const char * db_name, std::string & sql);
 	int				DropDB(const char * db_name, std::string & sql);
 	//todo
-	int				AlterTables(std::map<std::string, std::string> old_fields_type, std::string & sql);
-	const google::protobuf::Descriptor *	GetMsgDesc(const char * msg_type);
+	int					AlterTables(std::map<std::string, std::string> old_fields_type, std::string & sql);
 	EXTProtoMeta &		GetProtoMeta() { return protometa; }
+
+	int					GetMsgBufferFromMySQLRow(const char * msg_type, char * buffer, int * buffer_len, const MySQLRow &  row);
+
 };

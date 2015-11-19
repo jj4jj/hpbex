@@ -3,7 +3,6 @@
 #include "test.hpb.h"
 #include <iostream>
 #include "google/protobuf/compiler/importer.h"
-#include "google/protobuf/dynamic_message.h"
 
 extern std::stringstream error_stream;
 using namespace std;
@@ -56,8 +55,6 @@ int main(){
 	//auto hellogen =	msc.GetMsgDesc("Hello");
 	//msg_buffer -> sql
 
-
-
 	MySQLMsgMeta hellogen(&msc);
 	DBHello dhello;
 	struct MyPBLogger {
@@ -71,41 +68,27 @@ int main(){
 	dhello.set_pk1(20555);
 	dhello.set_pk2("86888");
 	dhello.set_b4(true);
+	bzero(buffer_db, sizeof(buffer_db));
 	if (!dhello.SerializeToArray(buffer_db, sizeof(buffer_db))){
 		cerr << "pack error !" << endl;
 		return -2;
 	}
 	int buffer_len = dhello.ByteSize();
-	hellogen.msg_desc = msc.GetMsgDesc("DBHello");
-#if 0
-	/*
-	UnknownFieldSet	ufs;
-	if (!ufs.ParseFromArray(buffer_db, buffer_len)){
-		cerr << "unpack error !" << endl;
-		return -2;
-	}
-	
-	cout << "parsed count:" << ufs.field_count() << endl;
-	for (int i = 0; i < ufs.field_count(); ++i){
-		cout << i << ":" << ufs.field(i).number() << " -> " << ufs.field(i).type() << endl;
-	}
-	*/
-#endif
-	DynamicMessageFactory	dmf(msc.GetProtoMeta().GetPool());
-	Message * pMsg = dmf.GetPrototype(hellogen.msg_desc)->New();
-
-	cout << "get type name:" << pMsg->GetTypeName() << endl;
-	if (!pMsg->ParseFromArray(buffer_db, buffer_len)){
-		cerr << "unpack error !" << endl;
-		return -2;
-	}
-	cout << "dyn msg parse from buffer ok !" << endl;
-
+	cout << "origin bytes:" << dhello.ByteSize() << "buffer:" << buffer_db << endl;
+	Message * pMsg = msc.GetProtoMeta().NewDynMessage("DBHello", buffer_db, buffer_len);
 	if (hellogen.AttachMsg(pMsg)){
 		cerr << "init meta error ! ret:" << iret << endl;
 		cerr << error_stream.str() << endl;
 		return -2;
 	}
+	cout << "parsed bytes:" << pMsg->ByteSize() << endl;
+	bzero(buffer_db, sizeof(buffer_db));
+	if (!pMsg->SerializeToArray(buffer_db, sizeof(buffer_db))){
+		cerr << "pack error !" << endl;
+		return -2;
+	}
+	cout << "parsed bytes:" << pMsg->ByteSize() << "buffer:" << buffer_db << endl;
+	cout << "===============================================" << endl;
 	string sql;
 	msc.CreateDB("test_msc", sql);
 	cout << sql << endl;

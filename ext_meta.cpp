@@ -1,12 +1,11 @@
 #include "ext_meta.h"
 #include "google/protobuf/compiler/importer.h"
+#include "google/protobuf/dynamic_message.h"
 #include "extensions_option.h"
 
 std::stringstream error_stream;
 using namespace std;
 using namespace google::protobuf;
-
-
 
 #define DIM_ARRAY(a)	(sizeof((a))/sizeof((a)[0]))
 
@@ -331,6 +330,7 @@ EXTProtoMeta::EXTProtoMeta(){
 	dst->MapPath("", "/usr/include");
 	dst->MapPath("", ".");
 	importer = nullptr;
+	dyn_msg_factory = nullptr;
 }
 EXTProtoMeta::~EXTProtoMeta(){
 	if (importer){
@@ -338,6 +338,9 @@ EXTProtoMeta::~EXTProtoMeta(){
 	}
 	if (dst){
 		delete dst;
+	}
+	if (dyn_msg_factory){
+		delete dyn_msg_factory;
 	}
 }
 int		EXTProtoMeta::Init(const char * path, ...){
@@ -361,8 +364,41 @@ const google::protobuf::FileDescriptor * EXTProtoMeta::LoadFile(const char * fil
 		cerr << "error import file:" << file << endl;
 		return nullptr;
 	}
+	dyn_msg_factory = new DynamicMessageFactory(importer->pool());
 	return ret;
 }
 const google::protobuf::DescriptorPool * EXTProtoMeta::GetPool(){
 	return importer->pool();
+}
+const google::protobuf::Descriptor *	 EXTProtoMeta::GetMsgDesc(const char* msg_type){
+	return importer->pool()->FindMessageTypeByName(msg_type);
+}
+google::protobuf::Message	*			 EXTProtoMeta::NewDynMessage(const char * msg_type, const char * buffer, size_t buffer_len){
+	auto msg_desc = GetMsgDesc(msg_type);
+	if (!msg_desc){
+		cerr << "get msg desc error ! msg_type:" << msg_type << endl;
+		return nullptr;
+	}
+	auto pProtMsg = dyn_msg_factory->GetPrototype(msg_desc);
+	if (!pProtMsg){
+		cerr << "get proto msg error ! msg_type:" << msg_type << endl;
+		return nullptr;
+	}
+	Message * pMsg = pProtMsg->New();
+	if (!pMsg){
+		cerr << "new msg from proto error ! msg_type:" << msg_type << endl;
+		return nullptr;
+	}
+	if (buffer_len == 0 || !buffer){
+		return pMsg;
+	}
+	if (!pMsg->ParseFromArray(buffer, (int)buffer_len)){
+		cerr << "unpack msg error !" << msg_type << endl;
+		FreeDynMessage(pMsg);
+		return nullptr;
+	}
+	return pMsg;
+}
+void									 EXTProtoMeta::FreeDynMessage(google::protobuf::Message * pMsg){
+	delete pMsg;
 }
