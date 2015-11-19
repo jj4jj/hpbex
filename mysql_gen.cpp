@@ -366,7 +366,7 @@ MySQLMsgConverter::MySQLMsgConverter(const string & file, st_mysql * pMysql, siz
 	escaped_buffer.reserve(MAX_FIELD_BUFFER * 2 + 1);
 }
 
-int		MySQLMsgConverter::SetFieldValue(google::protobuf::Message & msg, const char * key, const char * value, size_t value_length){
+int		MySQLMsgConverter::SetFieldValue(google::protobuf::Message & msg, const std::string & key, const char * value, size_t value_length){
 	const Reflection * pReflection = msg.GetReflection();
 	auto msg_desc = msg.GetDescriptor();
 	for (int i = 0; i < msg_desc->field_count(); ++i){
@@ -377,30 +377,63 @@ int		MySQLMsgConverter::SetFieldValue(google::protobuf::Message & msg, const cha
 		switch (pField->cpp_type())
 		{
 		case FieldDescriptor::CPPTYPE_FLOAT:
-			return std::to_string(pReflection->GetFloat(msg, pField));
+			pReflection->SetFloat(&msg, pField, atof(value));
+			return 0;
 		case FieldDescriptor::CPPTYPE_DOUBLE:
-			return std::to_string(pReflection->GetDouble(msg, pField));
+			pReflection->SetDouble(&msg, pField, atof(value));
+			return 0;
 		case FieldDescriptor::CPPTYPE_INT32:
-			return std::to_string(pReflection->GetInt32(msg, pField));
+			pReflection->SetInt32(&msg, pField, atoi(value));
+			return 0;
 		case FieldDescriptor::CPPTYPE_INT64:
-			return std::to_string(pReflection->GetInt64(msg, pField));
+			pReflection->SetInt64(&msg, pField, atoll(value));
+			return 0;
 		case FieldDescriptor::CPPTYPE_UINT32:
-			return std::to_string(pReflection->GetUInt32(msg, pField));
+			pReflection->SetUInt32(&msg, pField, atoi(value));
+			return 0;
 		case FieldDescriptor::CPPTYPE_UINT64:
-			return std::to_string(pReflection->GetUInt64(msg, pField));
+			pReflection->SetUInt64(&msg, pField, atoll(value));
+			return 0;
 		case FieldDescriptor::CPPTYPE_ENUM:
-			return std::to_string(pReflection->GetEnum(msg, pField)->number());
+			do {
+				auto evdesc = pField->enum_type()->FindValueByNumber(atoi(value));
+				if (evdesc){
+					pReflection->SetEnum(&msg, pField, evdesc);
+				}
+				else {
+					cerr << "not found the enum value:" << value << "! field name:" << pField->name() << " msg type:" << msg_desc->name() << endl;
+					return -1;
+				}
+			} while (false);
+			return 0;
 		case FieldDescriptor::CPPTYPE_BOOL:
-			return std::to_string(pReflection->GetBool(msg, pField));
+			pReflection->SetBool(&msg, pField, atoi(value) != 0 ? true : false);
+			return 0;
 		case FieldDescriptor::CPPTYPE_STRING:
-			return pReflection->GetString(msg, pField);
+			pReflection->SetString(&msg, pField, std::string(value, value_length));
+			return 0;
 		case FieldDescriptor::CPPTYPE_MESSAGE:
-			return "";
+			do{
+				auto pSubMsg = pReflection->MutableMessage(&msg, pField);
+				if (pSubMsg){
+					if (!pSubMsg->ParseFromArray(value, value_length)){
+						cerr << "parse mysql field error ! field name:" << pField->name() << " msg type:" << msg_desc->name() << endl;
+						return -2;
+					}
+				}
+				else {
+					cerr << "mutable sub message error ! field name:" << pField->name() << " msg type:"<< msg_desc->name() << endl;
+					return -3;
+				}
+
+			} while (false);
+			return 0;
 		default:
-			return "";
+			return -100;
 		}
 	}
-	return "";
+	cerr << "not found field in meta desc key:" << key << " msg type:" << msg_desc->name() << endl;
+	return 0;
 }
 string	MySQLMsgConverter::GetFieldValue(const google::protobuf::Message & msg, const char * key){
 	const Reflection * pReflection = msg.GetReflection();
@@ -496,7 +529,7 @@ int		MySQLMsgConverter::GetFieldsSQLKList(const google::protobuf::Message & msg,
 		if (buffer_len == 0){
 			if (field_buffer.empty()){
 				if (pField->cpp_type() <= FieldDescriptor::CPPTYPE_ENUM){
-					field_buffer = "0";
+					field_buffer = "0"; //not us
 				}
 				else { //string or message
 					field_buffer = "''";
@@ -531,10 +564,20 @@ int		MySQLMsgConverter::InitSchema(){
 	}
 	return 0;
 }
+#define TABLE_NAME_POSTFIX		("_")
+std::string		MySQLMsgConverter::GetMsgTypeNameFromTableName(const std::string & table_name){
+	string::size_type deli = table_name.find_last_of(TABLE_NAME_POSTFIX);
+	if (deli == string::npos){
+		return table_name;
+	}
+	else {
+		return table_name.substr(0, deli);
+	}
+}
 string		MySQLMsgConverter::GetTableName(const char * msg_type, int idx){
 	string tbname = msg_type;
 	if (idx >= 0){
-		tbname += "_";
+		tbname += TABLE_NAME_POSTFIX;
 		tbname += to_string(idx);
 	}
 	return tbname;
@@ -599,22 +642,44 @@ int			MySQLMsgConverter::DropDB(const char * db_name, std::string & sql){
 	return 0;
 }
 
+int			MySQLMsgConverter::GetMsgBufferFromMySQLRow(char * buffer, int * buffer_len, const MySQLRow &  sql_row){
 
-
-int			MySQLMsgConverter::GetMsgBufferFromMySQLRow(const char * msg_type, char * buffer, int * buffer_len, const MySQLRow &  sql_row){
-	Message * pMsg = protometa.NewDynMessage(msg_type);
-	if (!pMsg){
+	if (sql_row.num_fields <= 0){
+		//error number fields
+		cerr << "errror number fields:" << sql_row.num_fields << endl;
 		return -1;
+	}
+	std::string table_name = GetMsgTypeNameFromTableName(sql_row.res_fields[0].org_table);
+	Message * pMsg = protometa.NewDynMessage(table_name.c_str());
+	if (!pMsg){
+		//not found message for table name 
+		cerr << "not found message for table name:" << table_name << endl;
+		return -2;
 	}
 	int ret = 0;
 	for (int i = 0; i < sql_row.num_fields; ++i){		
 		ret = SetFieldValue(*pMsg,
-			sql_row.res_fields[i].name,
-			sql_row.row[i],
-			sql_row.row_lengths[i]));
+			std::string(sql_row.res_fields[i].org_name, sql_row.res_fields[i].org_name_length),
+			sql_row.row_data[i],
+			sql_row.row_lengths[i]);
 		if (ret){
-			return -1 + ret;
+			goto FAIL_CONV;
 		}
 	}
+	if (*buffer_len < pMsg->ByteSize()){
+		cerr << "the buffer length is too few for byte size:" << pMsg->ByteSize() << endl;
+		ret = -1000;
+		goto FAIL_CONV;
+	}
+	if (!pMsg->SerializeToArray(buffer, *buffer_len)){
+		cerr << "pack msg error :" << pMsg->ByteSize() << endl;
+		ret = -2000;
+		goto FAIL_CONV;
+	}
+	*buffer_len = pMsg->ByteSize();
+	protometa.FreeDynMessage(pMsg);
 	return 0;
+FAIL_CONV:
+	protometa.FreeDynMessage(pMsg);
+	return -1 + ret;
 }
