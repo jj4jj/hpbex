@@ -28,10 +28,11 @@ public:
 
 struct st_mysql_field;
 struct MySQLRow {
-	st_mysql_field *    res_fields;
-	int					num_fields;
-	char **				row_data;
-	unsigned long *		row_lengths;
+	const char *				table_name;
+	const char * *				fields_name;
+	int							num_fields;
+	const char **				row_data;
+	unsigned long *				row_lengths;
 };
 
 class MySQLMsgCvt {
@@ -59,5 +60,6 @@ public:
 	EXTProtoMeta &		GetProtoMeta() { return protometa; }
 
 	int					GetMsgBufferFromMySQLRow(char * buffer, int * buffer_len, const MySQLRow &  row);
+	int					GetMsgFromMySQLRow(google::protobuf::Message & msg, const MySQLRow &  row);
 
 };

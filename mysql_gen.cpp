@@ -617,7 +617,7 @@ int			MySQLMsgCvt::CreateTables(const char * msg_type, std::string & sql,int idx
 		return -2;
 	}
 	//template
-	string table_name = GetTableName(msg_type, -1);
+	string table_name = GetTableName(msg_type, idx);
 	sql = "CREATE TABLE IF NOT EXISTS `" + table_name + "` (";
 	for (auto & field : meta.sub_fields)
 	{
@@ -666,30 +666,42 @@ int			MySQLMsgCvt::DropDB(const char * db_name, std::string & sql){
 	sql += "`;";
 	return 0;
 }
-
-int			MySQLMsgCvt::GetMsgBufferFromMySQLRow(char * buffer, int * buffer_len, const MySQLRow &  sql_row){
-
+int			MySQLMsgCvt::GetMsgFromMySQLRow(google::protobuf::Message & msg, const MySQLRow &  sql_row){
 	if (sql_row.num_fields <= 0){
 		//error number fields
 		cerr << "errror number fields:" << sql_row.num_fields << endl;
 		return -1;
 	}
-	std::string table_name = GetMsgTypeNameFromTableName(sql_row.res_fields[0].org_table);
-	Message * pMsg = protometa.NewDynMessage(table_name.c_str());
-	if (!pMsg){
-		//not found message for table name 
-		cerr << "not found message for table name:" << table_name << endl;
+	string msg_type = msg.GetDescriptor()->name();
+	std::string msg_type_name = GetMsgTypeNameFromTableName(sql_row.table_name);
+	if (msg_type_name != msg_type){
+		cerr << "type not matched ! expect type:" << msg_type << endl;
 		return -2;
 	}
 	int ret = 0;
-	for (int i = 0; i < sql_row.num_fields; ++i){		
-		ret = SetFieldValue(*pMsg,
-			std::string(sql_row.res_fields[i].org_name, sql_row.res_fields[i].org_name_length),
+	for (int i = 0; i < sql_row.num_fields; ++i){
+		ret = SetFieldValue(msg,
+			std::string(sql_row.fields_name[i]),
 			sql_row.row_data[i],
 			sql_row.row_lengths[i]);
 		if (ret){
-			goto FAIL_CONV;
+			cerr << "set field value error !" << endl;
+			return -3;
 		}
+	}
+	return 0;
+}
+int			MySQLMsgCvt::GetMsgBufferFromMySQLRow(char * buffer, int * buffer_len, const MySQLRow &  sql_row){
+	std::string msg_type_name = GetMsgTypeNameFromTableName(sql_row.table_name);
+	Message * pMsg = protometa.NewDynMessage(msg_type_name.c_str());
+	if (!pMsg){
+		cerr << "not found message for table name:" << msg_type_name << endl;
+		return -1;
+	}
+	int ret = GetMsgFromMySQLRow(*pMsg, sql_row);
+	if (ret){
+		ret = -1 + ret;
+		goto FAIL_CONV;
 	}
 	if (*buffer_len < pMsg->ByteSize()){
 		cerr << "the buffer length is too few for byte size:" << pMsg->ByteSize() << endl;
@@ -702,9 +714,7 @@ int			MySQLMsgCvt::GetMsgBufferFromMySQLRow(char * buffer, int * buffer_len, con
 		goto FAIL_CONV;
 	}
 	*buffer_len = pMsg->ByteSize();
-	protometa.FreeDynMessage(pMsg);
-	return 0;
 FAIL_CONV:
 	protometa.FreeDynMessage(pMsg);
-	return -1 + ret;
+	return  ret;
 }
