@@ -28,7 +28,7 @@ be short for "Header Protobuf Extensions"
 1. install libprotobuf-dev9 (2.6.1 git clone from google/protobuf)
 2. install libmysqlclient-dev for test mysql msg converter [optional]
 3. read main.cpp code for generate POD *.hpb.h, example is simple , read the test.cpp for mysqlmsg releated. make && make test. (make cl for mysqlmsgconvert it also need [dcagent](https://github.com/jj4jj/dcagent "dcagent") repo) 
-4. do yourself work, the proto should import the extensions.proto , protoc with -I<the protobuf include path>
+4. do yourself work, the proto should import the extensions.proto , protoc with -I(the protobuf include path)
 
 ##compile
     #for simple test 
