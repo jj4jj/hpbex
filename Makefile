@@ -1,6 +1,5 @@
-hpbex: main.cpp ext_meta.cpp extensions_option.cpp extensions.pb.cc
-	g++ $^ -I/usr/local/include -lprotobuf -o $@ -std=c++11 -g -Wall
-
+hpbex: main.cpp ext_meta.cpp extensions_option.cpp extensions.pb.cc flatmsg_gen.h
+	g++ main.cpp ext_meta.cpp extensions_option.cpp extensions.pb.cc -I/usr/local/include -lprotobuf -o $@ -std=c++11 -g -Wall
 extensions.pb.cc: extensions.proto
 	protoc extensions.proto -I. -I/usr/local/include --cpp_out=.
 test: hpbex

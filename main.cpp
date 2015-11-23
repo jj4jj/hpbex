@@ -8,11 +8,11 @@ using namespace std;
 using namespace google::protobuf;
 int main(int argc, char * argv[]){
 	if (argc < 3){
-		cout << "usage:" << argv[0] << " <file name> <message type> [path]" << endl;
+		cout << "usage:" << argv[0] << " <file name> <message type> [<proto path>]" << endl;
 		return -1;
 	}
 	EXTProtoMeta pm;
-	if (pm.Init(nullptr)){
+	if (pm.Init(argv[3], nullptr)){
 		cerr << "init proto meta error !" << endl;
 		return -2;
 	}
@@ -34,10 +34,10 @@ int main(int argc, char * argv[]){
 		cerr << "parse from message desc error :" << error_stream.str() << endl;
 		return -2;
 	}
-	cerr << error_stream.str() << endl;
+	//cerr << error_stream.str() << endl;
 	error_stream.clear();
 	try {
-		gen.print();
+		gen.PrintFile();
 	}
 	catch (...){
 		cerr << "generate code error ! for:" << error_stream.str() << endl;
