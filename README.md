@@ -18,10 +18,9 @@ be short for "Header Protobuf Extensions"
 
 
 
-##todo
-1. test proto with package
-2. extend generators
-3. fixing bugs
+##doing
+1. extend generators
+2. fixing bugs
 
 
 ##usage
@@ -30,12 +29,13 @@ be short for "Header Protobuf Extensions"
 3. read main.cpp code for generate POD *.hpb.h, example is simple , read the test.cpp for mysqlmsg releated. make && make test. (make cl for mysqlmsgconvert it also need [dcagent](https://github.com/jj4jj/dcagent "dcagent") repo) 
 4. do yourself work, the proto should import the extensions.proto , protoc with -I(the protobuf include path)
 
-##compile
+##compile && run
     #for simple test 
 	clone the repo
 	install libprotobuf-dev (2.6.1)
 	make				#for generating hpbex program
 	make test 			#or excute: ./hpbex test.proto Hello
+    make eg             #run the example 
 
 ##tips
 - don't support the proto mutlti-level unfold a mysql table schema ;

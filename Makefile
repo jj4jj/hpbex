@@ -10,6 +10,8 @@ clean:
 	rm -f hpbex
 	rm -f *.pb.cc *.hpb.h
 	rm -f test_ext test
+eg:	hpbex
+	cd ./examples/proto/ && make gen
 
 ##########################################################################
 pbt: test.proto
