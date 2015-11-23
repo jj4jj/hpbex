@@ -16,6 +16,7 @@ message PK {
 }
 
 message Hero {
+    required    int32       id = 4;
     required    CommBase    base=1;
     repeated    int32       id_list=2[(f_count)="32"];
     repeated    PK          pk_list=3[(f_count)="MAX_PK_COUNT"];

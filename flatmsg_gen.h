@@ -67,7 +67,7 @@ public:
 				continue;
 			}
 			const string proto_name_post_fix = ".proto";
-			ns_name.replace(ns_name.find(proto_name_post_fix), proto_name_post_fix.length(), ".pb.h");
+			ns_name.replace(ns_name.find(proto_name_post_fix), proto_name_post_fix.length(), ".hpb.h");
 			std::cout << "#include \"" << ns_name << "\"" << endl;
 		}
 		cout << endl;
@@ -81,7 +81,7 @@ public:
 			string ns_name = ordered_desc[i]->file()->package();
 			if (!ns_name.empty() && ns_name != root->file()->package()){
 				//cout << "using " << ns_name << "::" << ordered_desc[i]->name() << endl;
-				cout << "using " << ns_name << "::" << EXTMetaUtil::GetStructName(ordered_desc[i]) << endl;
+				cout << "using " << ns_name << "::" << EXTMetaUtil::GetStructName(ordered_desc[i]) << ";" << endl;
 			}
 		}
 		cout << endl;
@@ -210,32 +210,43 @@ public:
 				pred_postfix = "&&";
 			}
 			auto & sfm = *msg_meta.pks_fields[i];
-			if (sfm.field_desc->type() == FieldDescriptor::TYPE_FLOAT ||
-				sfm.field_desc->type() == FieldDescriptor::TYPE_DOUBLE){
-				WRITE_LINE("%s (fabs(%s - rhs_.%s) < 10e-6) %s",
+			
+			if (!sfm.f_count.empty()){
+				WRITE_LINE("%s (memcmp(%s.list, rhs_.%s.list, std::max(%s.count * sizeof(%s.list[0]), rhs_.%s.count * sizeof(%s.list[0]))) == 0) %s",
 					pred_prefix.c_str(),
-					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
 					pred_postfix.c_str());
-			}
-			else if (sfm.field_desc->type() == FieldDescriptor::TYPE_STRING){
-				WRITE_LINE("%s (strncmp(%s.data, rhs.%s.data, %s) == 0) %s",
-					pred_prefix.c_str(),
-					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
-					sfm.f_length.c_str(), pred_postfix.c_str());
-			}
-			else if (sfm.field_desc->type() == FieldDescriptor::TYPE_BYTES){
-				WRITE_LINE("%s (%s.length == rhs_.%s.length && memcmp(%s.data, rhs_.%s.data, %s.length) == 0) %s",
-					pred_prefix.c_str(),
-					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
-					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
-					sfm.GetVarName().c_str(), pred_postfix.c_str());
 			}
 			else {
-				WRITE_LINE("%s (%s == rhs_.%s) %s",
-					pred_prefix.c_str(),
-					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
-					pred_postfix.c_str());
+				if (sfm.field_desc->type() == FieldDescriptor::TYPE_FLOAT ||
+					sfm.field_desc->type() == FieldDescriptor::TYPE_DOUBLE){
+					WRITE_LINE("%s (fabs(%s - rhs_.%s) < 10e-6) %s",
+						pred_prefix.c_str(),
+						sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+						pred_postfix.c_str());
+				}
+				else if (sfm.field_desc->type() == FieldDescriptor::TYPE_STRING){
+					WRITE_LINE("%s (strncmp(%s.data, rhs.%s.data, %s) == 0) %s",
+						pred_prefix.c_str(),
+						sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+						sfm.f_length.c_str(), pred_postfix.c_str());
+				}
+				else if (sfm.field_desc->type() == FieldDescriptor::TYPE_BYTES){
+					WRITE_LINE("%s (%s.length == rhs_.%s.length && memcmp(%s.data, rhs_.%s.data, %s.length) == 0) %s",
+						pred_prefix.c_str(),
+						sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+						sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+						sfm.GetVarName().c_str(), pred_postfix.c_str());
+				}
+				else {
+					WRITE_LINE("%s (%s == rhs_.%s) %s",
+						pred_prefix.c_str(),
+						sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+						pred_postfix.c_str());
+				}
 			}
+			
 			if (i == 0){
 				++level;
 			}
@@ -262,24 +273,34 @@ public:
 				pred_postfix = "&&";
 			}
 			auto & sfm = *msg_meta.pks_fields[i];
-			if (sfm.field_desc->type() == FieldDescriptor::TYPE_STRING){
-				WRITE_LINE("%s (strncmp(%s.data, rhs_.%s.data, %s) < 0 ) %s",
+
+			if (!sfm.f_count.empty()){
+				WRITE_LINE("%s (memcmp(%s.list, rhs_.%s.list, std::max(%s.count * sizeof(%s.list[0]), rhs_.%s.count * sizeof(%s.list[0]))) < 0) %s",
 					pred_prefix.c_str(),
-					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
-					sfm.f_length.c_str(), pred_postfix.c_str());
-			}
-			else if (sfm.field_desc->type() == FieldDescriptor::TYPE_BYTES){
-				WRITE_LINE("%s (memcmp(%s.data, rhs_.%s.data, std::min(%s.length, rhs_.%s.length) < 0 ) %s",
-					pred_prefix.c_str(),
-					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
-					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
 					pred_postfix.c_str());
 			}
 			else {
-				WRITE_LINE("%s (%s < rhs_.%s ) %s",
-					pred_prefix.c_str(),
-					sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
-					pred_postfix.c_str());
+				if (sfm.field_desc->type() == FieldDescriptor::TYPE_STRING){
+					WRITE_LINE("%s (strncmp(%s.data, rhs_.%s.data, %s) < 0 ) %s",
+						pred_prefix.c_str(),
+						sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+						sfm.f_length.c_str(), pred_postfix.c_str());
+				}
+				else if (sfm.field_desc->type() == FieldDescriptor::TYPE_BYTES){
+					WRITE_LINE("%s (memcmp(%s.data, rhs_.%s.data, std::min(%s.length, rhs_.%s.length) < 0 ) %s",
+						pred_prefix.c_str(),
+						sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+						sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+						pred_postfix.c_str());
+				}
+				else {
+					WRITE_LINE("%s (%s < rhs_.%s ) %s",
+						pred_prefix.c_str(),
+						sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
+						pred_postfix.c_str());
+				}
 			}
 			if (i == 0){
 				++level;
