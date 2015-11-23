@@ -13,6 +13,7 @@ clean:
 	rm -f ./examples/proto/*.h
 	rm -f ./examples/proto/*.cc
 	rm -f ./examples/proto/hpbex
+	rm -f ./examples/proto/test
 
 eg:	hpbex
 	cd ./examples/proto/ && make gen
