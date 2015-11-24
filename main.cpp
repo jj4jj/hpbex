@@ -83,11 +83,11 @@ int main(int argc, char * argv[]){
 				output_file = file.c_str();
 			}
 			clog << "generating file:" << output_file << " ... " << endl;
-			gen.PrintFile(output_file);
+			gen.DumpFile(output_file);
 			clog << "generate code file:" << output_file << " sucess !" << endl;
 		}
 		else {
-			gen.PrintFile();
+			std::cout << gen.GetCodeText() << endl;
 		}
 	}
 	catch ( exception & e){

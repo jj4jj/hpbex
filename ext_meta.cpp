@@ -106,7 +106,8 @@ string EXTFieldMeta::GetTypeName() {
 string EXTFieldMeta::GetVarName() {
 	//static const char * type_prefix = ["", "i", "ll", "dw", "ull", "df", "f", "b", "en", "str", "st"];
 	//desc->camelcase_name();
-	return field_desc->lowercase_name();
+	string lc_name = field_desc->lowercase_name();
+	return lc_name;
 }
 string EXTFieldMeta::GetScalarConvToMeth(const char * convtomsg_, const string & st_var_name, const string & msg_var_name){
 	auto fmt = field_desc->message_type();
