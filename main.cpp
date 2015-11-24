@@ -65,7 +65,7 @@ int main(int argc, char * argv[]){
 	GenerateCXXFlat gen(desc);
 	EXTMessageMeta	smm;
 	if (smm.AttachDesc(desc)){
-		cerr << "parse from message desc error :" << error_stream.str() << endl;
+		cerr << "parse from message desc error !" << error_stream.str() << endl;
 		return -2;
 	}
 	//cerr << error_stream.str() << endl;

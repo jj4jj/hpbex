@@ -20,4 +20,5 @@ message Hero {
     required    CommBase    base=1;
     repeated    int32       id_list=2[(f_count)="32"];
     repeated    PK          pk_list=3[(f_count)="MAX_PK_COUNT"];
+    required    string      str=5[(f_length)="32"];
 }
