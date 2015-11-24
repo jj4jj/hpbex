@@ -278,7 +278,7 @@ public:
 						pred_postfix.c_str());
 				}
 				else if (sfm.field_desc->type() == FieldDescriptor::TYPE_STRING){
-					WRITE_LINE("%s (strncmp(%s.data, rhs.%s.data, %s) == 0) %s",
+					WRITE_LINE("%s (strncmp(%s.data, rhs_.%s.data, %s) == 0) %s",
 						pred_prefix.c_str(),
 						sfm.GetVarName().c_str(), sfm.GetVarName().c_str(),
 						sfm.f_length.c_str(), pred_postfix.c_str());
