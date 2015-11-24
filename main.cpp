@@ -90,8 +90,8 @@ int main(int argc, char * argv[]){
 			gen.PrintFile();
 		}
 	}
-	catch (...){
-		cerr << "generate code error ! for:" << "exception; " << " extra info:" << error_stream.str() << endl;
+	catch ( exception & e){
+		cerr << "generate code error ! for:" << e.what() << " extra info:" << error_stream.str() << endl;
 		return -3;
 	}
 	return 0;

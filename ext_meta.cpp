@@ -266,17 +266,25 @@ int	    EXTMessageMeta::AttachDesc(const Descriptor * desc){
 	GET_DESC_STR_OPTION(m_autoinc, msg_desc);
 
 	////////////////////////////
-	ParseSubFields();
-	int ret = ParsePKS();
+	int ret = ParseSubFields();
+    if(ret){
+        return ret;
+    }
+	ret = ParsePKS();
 
 	return ret;
 }
-void	EXTMessageMeta::ParseSubFields(){
+int     EXTMessageMeta::ParseSubFields(){
+    int ret = 0;
 	for (int i = 0; i < msg_desc->field_count(); ++i){
 		EXTFieldMeta sfm;
-		sfm.AttachDesc(msg_desc->field(i));
+		ret = sfm.AttachDesc(msg_desc->field(i));
+        if(ret){
+            return ret;
+        }
 		sub_fields.push_back(sfm);
 	}
+    return ret;
 }
 int		EXTMessageMeta::ParsePKS(){
 	string::size_type bpos = 0, fpos = 0;

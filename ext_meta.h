@@ -95,7 +95,7 @@ public:
 	int	    AttachDesc(const google::protobuf::Descriptor * desc);
 	void	construct();
 private:
-	void	ParseSubFields();
+	int     ParseSubFields();
 	int		ParsePKS();
 };
 
