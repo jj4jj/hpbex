@@ -343,17 +343,14 @@ EXTProtoMeta::~EXTProtoMeta(){
 		delete dyn_msg_factory;
 	}
 }
-int		EXTProtoMeta::Init(const char * path, ...){
+int		EXTProtoMeta::Init(const char * * path, int n){
 	if (importer){
 		return -1;
 	}
-	va_list arg;
-	va_start(arg, path);
-	while (path){
-		dst->MapPath("", path);
-		path = va_arg(arg, const char *);
+	while (path && n--){
+		dst->MapPath("", path[n]);
+		//std::clog << "add path:" << path[n] << endl;
 	}
-	va_end(arg);
 	ProtoMetaErrorCollector mfec;
 	importer = new google::protobuf::compiler::Importer(dst, &mfec);
 	return 0;
