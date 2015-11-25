@@ -9,7 +9,7 @@
 #include <string>
 #include <exception>
 #include <stdexcept>
-#include<stdarg.h>
+#include <cstdarg>
 namespace google {
 	namespace protobuf {
 		class Descriptor;
