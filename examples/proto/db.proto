@@ -1,0 +1,14 @@
+
+
+package db;
+import "extensions.proto";
+import "comm.proto";
+
+
+
+message DBTest {
+    option(m_pks) = "role_id";
+    required       uint64   role_id = 1;
+    optional       uint32   seq = 2;
+    optional       CommBase     base =3 ;
+}

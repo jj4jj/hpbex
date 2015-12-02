@@ -1,0 +1,28 @@
+
+package cs;
+
+import "comm.proto";
+
+
+message CSMsgHead {
+    optional    uint32     cookie = 1;
+}
+
+message CSMsgLoginReq {
+    optional uint32 id =1;
+}
+
+message CSMsgLoginRes {
+    optional uint32 id =1;
+}
+message CSMsgLogin {
+    optional    CSMsgLoginReq   req = 1 ;
+    optional    CSMsgLoginRes   res = 2 ;
+}
+message CSMsg {
+    required    uint32      cmd = 1;
+    required    CSMsgHead   head = 2;
+    optional    CSMsgLogin  login = 3;
+    optional    CommBase    base = 4;
+
+};

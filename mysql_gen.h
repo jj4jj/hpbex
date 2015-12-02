@@ -45,11 +45,18 @@ public:
 	MySQLMsgCvt(const std::string & file, st_mysql * pMysql, size_t MAX_FIELD_BUFFER = 1024 * 1024);
 public:
 	std::string		GetFieldValue(const google::protobuf::Message & msg, const char * key);
-	int				GetMsgSQLKList(const google::protobuf::Message & msg, std::vector<std::pair<std::string, std::string> > & values);
+	int				GetMsgSQLKList(const google::protobuf::Message & msg, std::vector<std::pair<std::string, std::string> > & values, bool readmode = true);
 	int				GetFieldSQLKV(const google::protobuf::Message & msg, const google::protobuf::FieldDescriptor * pField, std::pair<std::string, std::string> & kv);
+	int				GetRepeatFieldSQLKV(const google::protobuf::Message & msg, const google::protobuf::FieldDescriptor * pField, std::pair<std::string, std::string> & kv, int idx);
 	std::string		GetTableName(const char * msg_type, int idx = -1);
 	std::string		GetMsgTypeNameFromTableName(const std::string & table_name);
 	int				SetFieldValue(google::protobuf::Message & msg,const std::string & key,const char * value, size_t value_length);
+	int				RepeatedExtendField(google::protobuf::Message & msg, const google::protobuf::Reflection & reflection, const google::protobuf::FieldDescriptor & field, int count);
+	int				RepeatedSetField(google::protobuf::Message & msg, const google::protobuf::Reflection & reflection, const google::protobuf::FieldDescriptor & field, int idx, const char * value, size_t value_length);
+	static	std::string		GetRepeatedFieldLengthName(const std::string & name);
+	static	std::string		GetRepeatedFieldName(const std::string & name, int idx);
+	static  bool			IsRepeatedFieldLength(const std::string & field_name, const std::string & key);
+	static	int				GetRepeatedFieldIdx(const std::string & field_name, const std::string & key);
 public:
 	int				InitSchema();
 	int				CreateTables(const char * msg_type, std::string & sql, int idx = -1);

@@ -31,7 +31,7 @@ int GetDescOption(string & value,D desc, const string & option){
 	if (!value.empty()) {
 		return 0;
 	}
-	error_stream << "info: not found the option:(" << option.c_str() << ") in desc:" << desc->name() << endl;
+	//error_stream << "info: not found the option:(" << option.c_str() << ") in desc:" << desc->name() << endl;
 	return -1;
 }
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -60,13 +60,13 @@ int	    EXTFieldMeta::AttachDesc(const FieldDescriptor * desc){
 	if (desc->is_repeated()){
 		//cout > 0
 		if (z_count <= 0){
-			error_stream << "the field:" << desc->name() << " in message:" << desc->type_name() << " is a repeat , but not found options [f_count:"<< f_count <<"] or count error value:" << z_count << endl;
+			error_stream << "the field: <" << desc->name() << "> is a repeated  , but not found options [f_count:"<< f_count <<"] or count is a error num value:" << z_count << endl;
 			return -1;
 		}
 	}
 	if (desc->cpp_type() == FieldDescriptor::CPPTYPE_STRING){
-		if (f_length.empty()){
-			error_stream << "the field:" << desc->name() << " in message:" << desc->type_name() << " is a string , but not found options [f_length:" << f_length << "] or length error value:" << z_length << endl;
+		if (z_length <= 0){
+			error_stream << "the field: <" << desc->name() << "> is a string , but not found options [f_length:" << f_length << "] or length is a error num value:" << z_length << endl;
 			return -2;
 		}
 	}
@@ -106,7 +106,8 @@ string EXTFieldMeta::GetTypeName() {
 string EXTFieldMeta::GetVarName() {
 	//static const char * type_prefix = ["", "i", "ll", "dw", "ull", "df", "f", "b", "en", "str", "st"];
 	//desc->camelcase_name();
-	return field_desc->lowercase_name();
+	string lc_name = field_desc->lowercase_name();
+	return lc_name;
 }
 string EXTFieldMeta::GetScalarConvToMeth(const char * convtomsg_, const string & st_var_name, const string & msg_var_name){
 	auto fmt = field_desc->message_type();
@@ -266,17 +267,26 @@ int	    EXTMessageMeta::AttachDesc(const Descriptor * desc){
 	GET_DESC_STR_OPTION(m_autoinc, msg_desc);
 
 	////////////////////////////
-	ParseSubFields();
-	int ret = ParsePKS();
+	int ret = ParseSubFields();
+    if(ret){
+        return ret;
+    }
+	ret = ParsePKS();
 
 	return ret;
 }
-void	EXTMessageMeta::ParseSubFields(){
+int     EXTMessageMeta::ParseSubFields(){
+    int ret = 0;
 	for (int i = 0; i < msg_desc->field_count(); ++i){
 		EXTFieldMeta sfm;
-		sfm.AttachDesc(msg_desc->field(i));
+		ret = sfm.AttachDesc(msg_desc->field(i));
+        if(ret){
+			error_stream << "parse field errro in message :" << msg_desc->full_name() << endl;
+            return ret;
+        }
 		sub_fields.push_back(sfm);
 	}
+    return ret;
 }
 int		EXTMessageMeta::ParsePKS(){
 	string::size_type bpos = 0, fpos = 0;
@@ -343,17 +353,14 @@ EXTProtoMeta::~EXTProtoMeta(){
 		delete dyn_msg_factory;
 	}
 }
-int		EXTProtoMeta::Init(const char * path, ...){
+int		EXTProtoMeta::Init(const char * * path, int n){
 	if (importer){
 		return -1;
 	}
-	va_list arg;
-	va_start(arg, path);
-	while (path){
-		dst->MapPath("", path);
-		path = va_arg(arg, const char *);
+	while (path && n--){
+		dst->MapPath("", path[n]);
+		//std::clog << "add path:" << path[n] << endl;
 	}
-	va_end(arg);
 	ProtoMetaErrorCollector mfec;
 	importer = new google::protobuf::compiler::Importer(dst, &mfec);
 	return 0;

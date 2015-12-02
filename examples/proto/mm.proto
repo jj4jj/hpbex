@@ -1,0 +1,26 @@
+
+import "extensions.proto";
+import "comm.proto";
+import "db.proto";
+
+package mm;
+
+enum ConstValueDef {
+    MAX_PK_COUNT = 30;
+};
+
+message PK {
+    option(m_pks) = "id";
+    required    int32   id = 1;
+    optional    db.DBTest   db = 2;
+}
+
+message Hero {
+    //option(m_pks) = "id";
+    required    int32       id = 4;
+    required    CommBase    base=1;
+    repeated    int32       id_list=2[(f_count)="32"];
+    repeated    PK          pk_list=3[(f_count)="MAX_PK_COUNT"];
+    required    string      str=5[(f_length)="32"];
+    optional    float       f32 =6;
+}

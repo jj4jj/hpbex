@@ -1,0 +1,11 @@
+
+import "extensions.proto";
+
+message CommBase {
+    required    uint32    id = 1;
+    required    uint32    level = 2;
+};
+
+
+
+

@@ -9,12 +9,13 @@
 #include <string>
 #include <exception>
 #include <stdexcept>
-#include<stdarg.h>
+#include <cstdarg>
 namespace google {
 	namespace protobuf {
 		class Descriptor;
 		class FieldDescriptor;
 		class FileDescriptor;
+		class Reflection;
 		class DescriptorPool;
 		class Message;
 		class EnumValueDescriptor;
@@ -95,7 +96,7 @@ public:
 	int	    AttachDesc(const google::protobuf::Descriptor * desc);
 	void	construct();
 private:
-	void	ParseSubFields();
+	int     ParseSubFields();
 	int		ParsePKS();
 };
 
@@ -106,7 +107,7 @@ class EXTProtoMeta {
 public:
 	EXTProtoMeta();
 	~EXTProtoMeta();
-	int		Init(const char * path, ...);
+	int		Init(const char ** paths,int n = 0); 
 	const google::protobuf::FileDescriptor * LoadFile(const char * file);
 	const google::protobuf::DescriptorPool * GetPool();
 	const google::protobuf::Descriptor *	 GetMsgDesc(const char * msg_type);
