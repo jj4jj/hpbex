@@ -42,7 +42,6 @@ message DBHello {
 	option(m_pks) = "pk1,pk2";
 	option(m_divkey) = "pk1";
 	option(m_divnum) = 100;
-	
 	required uint64 pk1 = 1;
 	required string pk2 = 2[(f_length)="MAX_NAME_LENGTH"];
 	optional uint32	f1 = 3;
