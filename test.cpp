@@ -8,7 +8,6 @@ extern std::stringstream error_stream;
 using namespace std;
 using namespace google::protobuf;
 
-
 #include "../dcagent/base/utility_mysql.h"
 #include "../dcagent/base/logger.h"
 
@@ -79,7 +78,7 @@ int main(){
 		return -2;
 	}
 	int buffer_len = dhello.ByteSize();
-	cout << "origin bytes:" << dhello.ByteSize() << "buffer:" << buffer_db << endl;
+	//cout << "origin bytes:" << dhello.ByteSize() << "buffer:" << buffer_db << endl;
 	Message * pMsg = msc.GetProtoMeta().NewDynMessage("DBHello", buffer_db, buffer_len);
 	if (hellogen.AttachMsg(pMsg)){
 		cerr << "init meta error ! ret:" << iret << endl;
@@ -92,7 +91,7 @@ int main(){
 		cerr << "pack error !" << endl;
 		return -2;
 	}
-	cout << "parsed bytes:" << pMsg->ByteSize() << "buffer:" << buffer_db << endl;
+	//cout << "parsed bytes:" << pMsg->ByteSize() << "buffer:" << buffer_db << endl;
 	cout << "===============================================" << endl;
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -101,10 +100,11 @@ int main(){
 	mysqlclient_t	mc;
 	mysqlclient_t::cnnx_conf_t	conf;
 	conf.ip = "127.0.0.1";
-	conf.uname = "test";
-	conf.passwd = "123456";
+	conf.uname = "gsgame";
+	conf.passwd = "gsgame";
 	conf.port = 3306;
 	if (mc.init(conf)){
+		LOGP("mysql init error !");
 		return -1;
 	}
 	mc.execute("use test;");
@@ -133,7 +133,7 @@ int main(){
 	mc.execute(sql);
 
 	struct _test {
-		static void 	cb(void* ud, INOUT bool & need_more, const dcsutil::mysqlclient_t::mysqlclient_row_t & row){
+		static void 	cb(void* ud, INOUT bool & need_more, const dcsutil::mysqlclient_t::table_row_t & row){
 			LOGP("cb ud:%p row:%s (%zu) name:%s total:%zu offset:%zu! more:%d",
 				ud, row.row_data[0], row.row_length[0], row.fields_name[0], row.row_total, row.row_offset, need_more);
 			static char buffer[128];

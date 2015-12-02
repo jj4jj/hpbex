@@ -15,6 +15,7 @@ namespace google {
 		class Descriptor;
 		class FieldDescriptor;
 		class FileDescriptor;
+		class Reflection;
 		class DescriptorPool;
 		class Message;
 		class EnumValueDescriptor;
