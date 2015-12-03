@@ -36,6 +36,8 @@ be short for "Header Protobuf Extensions"
 	make				#for generating hpbex program
 	make test 			#or excute: ./hpbex test.proto Hello
     make eg             #run the example 
+    make mcl            #clone the dcagent to uplayer and build it 
+    ./test              #test mysql generateor
 
 ##tips
 - don't support the proto mutlti-level unfold a mysql table schema ;
