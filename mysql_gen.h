@@ -58,15 +58,8 @@ public:
 	EXTProtoMeta &		GetProtoMeta() { return protometa; }
 
 	//top layer unfold
-	int					GetMsgBufferFromSQLRow(char * buffer, int * buffer_len, const MySQLRow &  row);
-	int					GetMsgFromSQLRow(google::protobuf::Message & msg, const MySQLRow &  row);
-	//totally unfold
-	int					GetMsgBufferFromFlatSQLRow(char * buffer, int * buffer_len, const MySQLRow &  row);
-	int					GetMsgFromFlatSQLRow(google::protobuf::Message & msg, const MySQLRow &  row);
-
-
-
-
+	int					GetMsgBufferFromSQLRow(char * buffer, int * buffer_len, const MySQLRow &  row, bool faltmode = false);
+	int					GetMsgFromSQLRow(google::protobuf::Message & msg, const MySQLRow &  row, bool faltmode = false);
 	//---------------------------------------------------------------------------------------------
 public:
 	//for msg mysql meta

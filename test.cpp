@@ -133,15 +133,18 @@ int main(int argc, char ** argv){
 	hellogen.Update(sql, flatmode);
 	mc.execute(sql);
 
-	hellogen.Delete(sql, "", flatmode);
+	hellogen.Delete(sql, nullptr, flatmode);
 	mc.execute(sql);
 
 	hellogen.Replace(sql, flatmode);
 	mc.execute(sql);
 
-	hellogen.Select(sql, nullptr, "", flatmode);
+	hellogen.Select(sql, nullptr, nullptr, flatmode);
 	mc.execute(sql);
-
+	struct param_t  {
+		MySQLMsgCvt * cvt;
+		bool	flatmode;
+	};
 	struct _test {
 		static void 	cb(void* ud, INOUT bool & need_more, const dcsutil::mysqlclient_t::table_row_t & row){
 			LOGP("cb ud:%p row:%s (%zu) name:%s total:%zu offset:%zu! more:%d",
@@ -153,9 +156,9 @@ int main(int argc, char ** argv){
 			msr.num_fields = row.fields_count;
 			msr.fields_name = row.fields_name;
 			msr.table_name = row.table_name;
-			MySQLMsgCvt * pmsc = (MySQLMsgCvt*)ud;
+			param_t * pmsc = (param_t*)ud;
 			int msglen = 128;
-			pmsc->GetMsgBufferFromSQLRow(buffer, &msglen, msr);
+			pmsc->cvt->GetMsgBufferFromSQLRow(buffer, &msglen, msr, pmsc->flatmode);
 			cout << "get msg buffer froom mysql row buffer len:" << msglen << endl;
 			DBHello parse_hello;
 			if (!parse_hello.ParseFromArray(buffer, msglen)){
@@ -165,7 +168,8 @@ int main(int argc, char ** argv){
 			cout << "unpacked msg:" << parse_hello.ShortDebugString() << endl;
 		}
 	};
-	int ret = mc.result(&msc, _test::cb);
+	param_t  pm = { &msc, flatmode };
+	int ret = mc.result(&pm, _test::cb);
 	if (ret < 0){
 		std::cerr << ret << " error:" << mc.err_msg() << endl;
 		

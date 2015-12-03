@@ -382,6 +382,10 @@ int		MySQLMsgCvt::SetMsgFieldMySQLValue(google::protobuf::Message & msg, const s
 	const Reflection * pReflection = msg.GetReflection();
 	auto msg_desc = msg.GetDescriptor();
 	const FieldDescriptor * pField = msg_desc->FindFieldByName(key);
+	if (!pField){
+		cerr << "not found the msg field from mysql field name :" << key << endl;
+		return -1; //not found
+	}
 	if (pField->is_repeated()){
 		//not support
 		cerr << "not support repeat field in top layer unfolding mode ! field:" << pField->name() << endl;
@@ -490,6 +494,7 @@ int		MySQLMsgCvt::GetMsgSQLKV(const google::protobuf::Message & msg, const Field
 	field_buffer[0] = 0;
 	size_t buffer_len = 0;
 	const Reflection * pReflection = msg.GetReflection();
+	bool need_escape = false;
 	switch (pField->cpp_type())
 	{
 	case FieldDescriptor::CPPTYPE_FLOAT:
@@ -517,7 +522,8 @@ int		MySQLMsgCvt::GetMsgSQLKV(const google::protobuf::Message & msg, const Field
 		buffer_len = snprintf((char*)field_buffer.data(), field_buffer.capacity(), "%d", pReflection->GetBool(msg, pField)?1:0);
 		break;
 	case FieldDescriptor::CPPTYPE_STRING:
-		buffer_len = snprintf((char*)field_buffer.data(), field_buffer.capacity(), "%s", pReflection->GetString(msg, pField).c_str());
+		buffer_len = snprintf((char*)field_buffer.data(), field_buffer.capacity(), "'%s'", pReflection->GetString(msg, pField).c_str());
+		need_escape = true;
 		break;
 	case FieldDescriptor::CPPTYPE_MESSAGE:
 		if (pReflection->HasField(msg, pField)){
@@ -529,24 +535,25 @@ int		MySQLMsgCvt::GetMsgSQLKV(const google::protobuf::Message & msg, const Field
 			*((char*)field_buffer.data()) = '\'';
 			*((char*)field_buffer.data() + 1 + _tmpmsg.ByteSize()) = '\'';
 			buffer_len = _tmpmsg.ByteSize() + 2;
+			need_escape = true;
 		}
-		break;
+		else {
+			*((char*)field_buffer.data()) = '\'';
+			*((char*)field_buffer.data() + 1) = '\'';
+			buffer_len = 2;
+		}
 	default:
 		cerr << "unkown type ! field:" << pField->name() << " type: " << pField->cpp_type() << endl;
 		return -2;
 	}
-	if (buffer_len == 0){
-		*((char*)field_buffer.data()) = '\'';
-		*((char*)field_buffer.data() + 1) = '\'';
-		buffer_len = 2;
-	}
+	assert(buffer_len != 0);
 	//need escape
-	if (mysql){
-		char * buffer_msg = (char*)field_buffer.data();
+	if (mysql && need_escape && buffer_len > 2){
 		bzero((char*)escaped_buffer.data() + buffer_len,
 			buffer_len + 1); //
-		mysql_real_escape_string(mysql, (char*)&escaped_buffer[1], buffer_msg, buffer_len);
+		mysql_real_escape_string(mysql, (char*)&escaped_buffer[1], (char*)field_buffer.data() + 1, buffer_len - 2);
 		kv.second.assign(escaped_buffer.data());
+		kv.second.append("'");
 	}
 	else {
 		kv.second.assign(field_buffer.data(), buffer_len);
@@ -561,7 +568,7 @@ int		MySQLMsgCvt::GetMsgSQLKVList(const google::protobuf::Message & msg, std::ve
 	for (int i = 0; i < msg_desc->field_count(); ++i)
 	{
 		const FieldDescriptor * pField = msg_desc->field(i);
-		if (!pField){
+		if (!msg.GetReflection()->HasField(msg, pField)){
 			continue;
 		}
 		std::pair<std::string, std::string> kv;
@@ -703,7 +710,7 @@ int			MySQLMsgCvt::GetMsgFlatTableSQLFields(const google::protobuf::Descriptor *
 		//sql += "`" + GetRepeatedFieldLengthName(field.field_desc->name()) + "` ";
 		//sql += "INT UNSIGNED NOT NULL";
 		if (field.field_desc->is_repeated()){
-			//
+			//is repeated , msg or not , count is first
 			sql += "`" + prefix + GetRepeatedFieldLengthName(field.field_desc->name()) + "` ";
 			sql += "INT UNSIGNED NOT NULL";
 			sql += ",\n";		
@@ -731,7 +738,7 @@ int			MySQLMsgCvt::GetMsgFlatTableSQLFields(const google::protobuf::Descriptor *
 			}
 		}
 		else {
-			sql += "`" + field.field_desc->name() + "` " + field.GetMysqlFieldType();
+			sql += "`" + prefix + field.field_desc->name() + "` " + field.GetMysqlFieldType();
 			sql += " NOT NULL";
 			sql += ",\n";
 		}
@@ -751,12 +758,9 @@ int			MySQLMsgCvt::CreateFlatTables(const char * msg_type, std::string & sql, in
 	//template
 	string table_name = GetTableName(msg_type, idx);
 	sql = "CREATE TABLE IF NOT EXISTS `" + table_name + "` (";
-	for (auto & field : meta.sub_fields)
-	{
-		sql += "`" + field.field_desc->name() + "` " + field.GetMysqlFieldType();
-		sql += " NOT NULL";
-		sql += ",\n";
-	}
+	//append table sql fields type defines	
+	GetMsgFlatTableSQLFields(msg_desc, sql, "");
+
 	string pks = "";
 	for (auto & pk : meta.pks_name)
 	{
@@ -845,7 +849,7 @@ int			MySQLMsgCvt::DropDB(const char * db_name, std::string & sql){
 	sql += "`;";
 	return 0;
 }
-int			MySQLMsgCvt::GetMsgFromSQLRow(google::protobuf::Message & msg, const MySQLRow &  sql_row){
+int			MySQLMsgCvt::GetMsgFromSQLRow(google::protobuf::Message & msg, const MySQLRow &  sql_row, bool flatmode ){
 	if (sql_row.num_fields <= 0){
 		//error number fields
 		cerr << "errror number fields:" << sql_row.num_fields << endl;
@@ -858,26 +862,34 @@ int			MySQLMsgCvt::GetMsgFromSQLRow(google::protobuf::Message & msg, const MySQL
 		return -2;
 	}
 	int ret = 0;
-	for (int i = 0; i < sql_row.num_fields; ++i){
-		ret = SetMsgFieldMySQLValue(msg,
-			std::string(sql_row.fields_name[i]),
-			sql_row.row_data[i],
-			sql_row.row_lengths[i]);
-		if (ret){
-			cerr << "set field value error !" << endl;
-			return -3;
+	if (flatmode){		
+		ret = SetMsgSQLFlatKVList(msg, sql_row);
+	}
+	else {
+		for (int i = 0; i < sql_row.num_fields; ++i){
+			ret = SetMsgFieldMySQLValue(msg,
+				std::string(sql_row.fields_name[i]),
+				sql_row.row_data[i],
+				sql_row.row_lengths[i]);
+			if (ret){
+				cerr << "set field :" << sql_row.fields_name[i] << " value error !" << endl;
+				break;
+			}
 		}
+	}
+	if (ret){
+		return -3;
 	}
 	return 0;
 }
-int			MySQLMsgCvt::GetMsgBufferFromSQLRow(char * buffer, int * buffer_len, const MySQLRow &  sql_row){
+int			MySQLMsgCvt::GetMsgBufferFromSQLRow(char * buffer, int * buffer_len, const MySQLRow &  sql_row, bool flatmode){
 	std::string msg_type_name = GetMsgTypeNameFromTableName(sql_row.table_name);
 	Message * pMsg = protometa.NewDynMessage(msg_type_name.c_str());
 	if (!pMsg){
 		cerr << "not found message for table name:" << msg_type_name << endl;
 		return -1;
 	}
-	int ret = GetMsgFromSQLRow(*pMsg, sql_row);
+	int ret = GetMsgFromSQLRow(*pMsg, sql_row, flatmode);
 	if (ret){
 		ret = -1 + ret;
 		goto FAIL_CONV;
@@ -903,13 +915,11 @@ MySQLMsgCvt::GetMsgSQLFlatKVRepeated(const google::protobuf::Message & msg,
 	const google::protobuf::FieldDescriptor * pField,
 	int idx, std::vector<std::pair<std::string, std::string> > & values, const string & prefix){
 	//get idx value
-	//basic type
 	std::pair<std::string, std::string> kv;
 	kv.first = prefix + pField->name();
 	field_buffer[0] = 0;
 	size_t buffer_len = 0;
-	const char * field_buffer_data = 0;
-	string str_field_buffer;
+	bool need_escape = false;
 	switch (pField->cpp_type())
 	{
 	case FieldDescriptor::CPPTYPE_FLOAT:
@@ -937,31 +947,24 @@ MySQLMsgCvt::GetMsgSQLFlatKVRepeated(const google::protobuf::Message & msg,
 		buffer_len = snprintf((char*)field_buffer.data(), field_buffer.capacity(), "%d", pReflection->GetRepeatedBool(msg, pField, idx) ? 1 : 0);
 		break;
 	case FieldDescriptor::CPPTYPE_STRING:
-		buffer_len = pReflection->GetRepeatedStringReference(msg, pField, idx, &str_field_buffer).length();
-		field_buffer_data = str_field_buffer.data();
+		buffer_len = snprintf((char*)field_buffer.data(), field_buffer.capacity(), "'%s'", pReflection->GetString(msg, pField).c_str());
+		need_escape = true;
 		break;
 	default:
 		cerr << "unkown type ! field:" << pField->name() << " type: " << pField->cpp_type() << endl;
 		return -100;
 	}
-	field_buffer_data = field_buffer.data();
-	if (buffer_len == 0){
-		*((char*)field_buffer.data()) = '\'';
-		*((char*)field_buffer.data() + 1) = '\'';
-		buffer_len = 2;
-	}
-	else {
-		field_buffer_data = str_field_buffer.data();
-	}
+	assert(buffer_len > 0);
 	//need escape
-	if (mysql){
+	if (mysql && need_escape && buffer_len > 2){
 		memset((char*)escaped_buffer.data() + buffer_len, 0,
 			buffer_len + 1); //
-		mysql_real_escape_string(mysql, (char*)&escaped_buffer[1], field_buffer_data, buffer_len);
+		mysql_real_escape_string(mysql, (char*)&escaped_buffer[1], (char*)field_buffer.data() + 1, buffer_len - 2);
 		kv.second.assign(escaped_buffer.data());
+		kv.second.append("'");
 	}
 	else {
-		kv.second.assign(field_buffer_data, buffer_len);
+		kv.second.assign(field_buffer.data(), buffer_len);
 	}
 	values.push_back(kv);
 	return 0;
@@ -971,6 +974,9 @@ int		MySQLMsgCvt::GetMsgSQLFlatKVList(const google::protobuf::Message & msg, std
 	const Reflection * pReflection = msg.GetReflection();
 	for (int i = 0; i < msg_desc->field_count(); ++i){
 		const FieldDescriptor * pField = msg_desc->field(i);
+		if (!pReflection->HasField(msg, pField)){
+			continue;
+		}
 		std::pair<std::string, std::string> kv;
 		if (pField->is_repeated()){
 			const Reflection * pReflection = msg.GetReflection();
@@ -1002,8 +1008,7 @@ int		MySQLMsgCvt::GetMsgSQLFlatKVList(const google::protobuf::Message & msg, std
 			kv.first = prefix + pField->name();
 			field_buffer[0] = 0;
 			size_t buffer_len = 0;
-			const char * field_buffer_data = 0;
-			string str_field_buffer;
+			bool need_escape = false;
 			switch (pField->cpp_type())
 			{
 			case FieldDescriptor::CPPTYPE_FLOAT:
@@ -1031,34 +1036,26 @@ int		MySQLMsgCvt::GetMsgSQLFlatKVList(const google::protobuf::Message & msg, std
 				buffer_len = snprintf((char*)field_buffer.data(), field_buffer.capacity(), "%d", pReflection->GetBool(msg, pField) ? 1 : 0);
 				break;
 			case FieldDescriptor::CPPTYPE_STRING:
-				buffer_len = pReflection->GetStringReference(msg, pField, &str_field_buffer).length();
-				field_buffer_data = str_field_buffer.data();
+				buffer_len = snprintf((char*)field_buffer.data(), field_buffer.capacity(), "'%s'", pReflection->GetString(msg, pField).c_str());
+				need_escape = true;
 				break;
 			default:
 				cerr << "unkown type ! field:" << pField->name() << " type: " << pField->cpp_type() << endl;
 				return -100;
 			}
-			field_buffer_data = field_buffer.data();
-			if (buffer_len == 0){
-				*((char*)field_buffer.data()) = '\'';
-				*((char*)field_buffer.data() + 1) = '\'';
-				buffer_len = 2;
-			}
-			else {
-				field_buffer_data = str_field_buffer.data();
-			}
+			assert(buffer_len > 0);
 			//need escape
-			if (mysql){
+			if (mysql && need_escape && buffer_len > 2){
 				memset((char*)escaped_buffer.data() + buffer_len, 0,
 					buffer_len + 1); //
-				mysql_real_escape_string(mysql, (char*)&escaped_buffer[1], field_buffer_data, buffer_len);
+				mysql_real_escape_string(mysql, (char*)&escaped_buffer[1], (char*)field_buffer.data() + 1, buffer_len - 2);
 				kv.second.assign(escaped_buffer.data());
+				kv.second.append("'");
 			}
 			else {
-				kv.second.assign(field_buffer_data, buffer_len);
+				kv.second.assign(field_buffer.data(), buffer_len);
 			}
 			values.push_back(kv);
-			return 0;
 		}
 	}
 	return 0;
