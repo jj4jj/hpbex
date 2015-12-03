@@ -8,10 +8,11 @@ extern std::stringstream error_stream;
 using namespace std;
 using namespace google::protobuf;
 
-#include "../dcagent/base/utility_mysql.h"
+#include "../dcagent/utility/utility_mysql.h"
 #include "../dcagent/base/logger.h"
+#include "../dcagent/base/cmdline_opt.h"
 
-int main(){
+int main(int argc, char ** argv){
 	/*
 	Hello_ST hs1, hs2;
 	hs1.d.b.f1 = 22;
@@ -105,8 +106,8 @@ int main(){
 	mysqlclient_t	mc;
 	mysqlclient_t::cnnx_conf_t	conf;
 	conf.ip = "127.0.0.1";
-	conf.uname = "gsgame";
-	conf.passwd = "gsgame";
+	conf.uname = "test";
+	conf.passwd = "123456";
 	conf.port = 3306;
 	if (mc.init(conf)){
 		LOGP("mysql init error !");
@@ -114,27 +115,31 @@ int main(){
 	}
 	mc.execute("use test;");
 
+	///////////////////////////////////////////////////////////////////////
+	cmdline_opt_t	cmdopt(argc, &argv[0]);
+	cmdopt.parse("flatmode:n::generate mysql sql in flat mode");
+	bool flatmode = cmdopt.getoptstr("flatmode") ? true : false;
 
 	string sql;
 	msc.CreateDB("test_msc", sql);
 	mc.execute(sql);
 
-	hellogen.CreateTable(sql);
+	hellogen.CreateTable(sql, flatmode);
 	mc.execute(sql);
 
-	hellogen.Insert(sql);
+	hellogen.Insert(sql, flatmode);
 	mc.execute(sql);
 
-	hellogen.Update(sql);
+	hellogen.Update(sql, flatmode);
 	mc.execute(sql);
 
-	hellogen.Delete(sql);
+	hellogen.Delete(sql, "", flatmode);
 	mc.execute(sql);
 
-	hellogen.Replace(sql);
+	hellogen.Replace(sql, flatmode);
 	mc.execute(sql);
 
-	hellogen.Select(sql, nullptr, "");
+	hellogen.Select(sql, nullptr, "", flatmode);
 	mc.execute(sql);
 
 	struct _test {

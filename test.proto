@@ -54,6 +54,6 @@ message DBHello {
 	optional Hello	hello = 5;
 	optional bool	b4 = 6;
 	optional bytes bytesmsg = 7[(f_length)="MAX_BUFF_NUM"];
-    repeated uint32 repeat_test = 8[(f_count)="32"];
-    repeated Award repeat_msg = 9[(f_count)="5"];
+  //  repeated uint32 repeat_test = 8[(f_count)="32"];
+  //  repeated Award repeat_msg = 9[(f_count)="5"];
 }

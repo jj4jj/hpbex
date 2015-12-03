@@ -28,6 +28,6 @@ pbt: test.proto
 test_ext: extensions.pb.cc pbt
 	g++ -I/usr/local/include -g test_ext.cpp extensions_option.cpp extensions.pb.cc test.pb.cc -o test_ext ${PROTOBUF_LIB} -std=c++11
 mcl: pbt src
-	g++ test.cpp ext_meta.cpp mysql_gen.cpp extensions_option.cpp *.cc -o test ${PROTOBUF_INC} -std=c++11 -g -Wall ${PROTOBUF_LIB} -lmysqlclient -L../dcagent/lib -ldcbase
+	g++ test.cpp ext_meta.cpp mysql_gen.cpp extensions_option.cpp *.cc -o test ${PROTOBUF_INC} -std=c++11 -g -Wall ${PROTOBUF_LIB} -lmysqlclient -L../dcagent/lib -ldcbase -I../dcagent ../dcagent/utility/utility_mysql.cpp
 
 ##########################################################################
