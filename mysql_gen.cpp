@@ -505,8 +505,10 @@ int		MySQLMsgCvt::SetFieldValue(google::protobuf::Message & msg, const std::stri
 			if (rep_idx >= 0){
 				return RepeatedSetField(msg, *pReflection, *pField, rep_idx, value, value_length);
 			}
+			continue;
 		}
-		else if (pField->name() != key){
+		/////////////////////////not repeat . scalar ////////////////////////////////////////
+		if (pField->name() != key){
 			continue;
 		}
 		//single
@@ -840,10 +842,12 @@ int			MySQLMsgCvt::GetRepeatedFieldIdx(const std::string & field_name, const std
 	if (fpos == string::npos){
 		return -1;
 	}
+	fpos += field_name.length();
 	if (key.substr(fpos, strlen(TABLE_REPEATED_FIELD_POSTFIX)) != TABLE_REPEATED_FIELD_POSTFIX){
 		return -2;
 	}
-	string sidx = key.substr(fpos + strlen(TABLE_REPEATED_FIELD_POSTFIX));
+	fpos += strlen(TABLE_REPEATED_FIELD_POSTFIX);
+	string sidx = key.substr(fpos);
 	if (sidx.empty() || sidx[0] < '0' || sidx[0] > '9'){
 		return -3;
 	}
