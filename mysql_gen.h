@@ -11,19 +11,20 @@ struct MySQLMsgMeta {
 	int32_t									table_idx;
 public:
 	MySQLMsgMeta(MySQLMsgCvt * pCvt);
-	int		AttachMsg(const google::protobuf::Message *		msg);
+	int		AttachMsg(const google::protobuf::Message *		msg, bool flatmode = false);
 private:
 	void	construct();
 public:
 	std::string		GetTableName();
 	int32_t			GetTableIdx();
-	int				Select(std::string & sql, std::vector<std::string> * fields = nullptr, const char * where_ = nullptr);
-	int				Delete(std::string & sql, const char * where_ = nullptr);
-	int				Replace(std::string & sql);
-	int				Update(std::string & sql);
-	int				Insert(std::string & sql);
-	int				CreateTable(std::string & sql);
+	int				Select(std::string & sql, std::vector<std::string> * fields = nullptr, const char * where_ = nullptr, bool flatmode = false);
+	int				Delete(std::string & sql, const char * where_ = nullptr, bool flatmode = false);
+	int				Replace(std::string & sql , bool flatmode = false);
+	int				Update(std::string & sql , bool flatmode = false);
+	int				Insert(std::string & sql , bool flatmode = false);
+	int				CreateTable(std::string & sql, bool flatmode = false);
 	int				DropTable(std::string & sql);
+
 };
 
 struct st_mysql_field;
@@ -43,30 +44,78 @@ class MySQLMsgCvt {
 	EXTProtoMeta		protometa; //dynloading
 public:
 	MySQLMsgCvt(const std::string & file, st_mysql * pMysql, size_t MAX_FIELD_BUFFER = 1024 * 1024);
+
 public:
-	std::string		GetFieldValue(const google::protobuf::Message & msg, const char * key);
-	int				GetMsgSQLKList(const google::protobuf::Message & msg, std::vector<std::pair<std::string, std::string> > & values, bool readmode = true);
-	int				GetFieldSQLKV(const google::protobuf::Message & msg, const google::protobuf::FieldDescriptor * pField, std::pair<std::string, std::string> & kv);
-	int				GetRepeatFieldSQLKV(const google::protobuf::Message & msg, const google::protobuf::FieldDescriptor * pField, std::pair<std::string, std::string> & kv, int idx);
-	std::string		GetTableName(const char * msg_type, int idx = -1);
-	std::string		GetMsgTypeNameFromTableName(const std::string & table_name);
-	int				SetFieldValue(google::protobuf::Message & msg,const std::string & key,const char * value, size_t value_length);
-	int				RepeatedExtendField(google::protobuf::Message & msg, const google::protobuf::Reflection & reflection, const google::protobuf::FieldDescriptor & field, int count);
-	int				RepeatedSetField(google::protobuf::Message & msg, const google::protobuf::Reflection & reflection, const google::protobuf::FieldDescriptor & field, int idx, const char * value, size_t value_length);
-	static	std::string		GetRepeatedFieldLengthName(const std::string & name);
-	static	std::string		GetRepeatedFieldName(const std::string & name, int idx);
-	static  bool			IsRepeatedFieldLength(const std::string & field_name, const std::string & key);
-	static	int				GetRepeatedFieldIdx(const std::string & field_name, const std::string & key);
-public:
-	int				InitSchema();
-	int				CreateTables(const char * msg_type, std::string & sql, int idx = -1);
-	int				CreateDB(const char * db_name, std::string & sql);
-	int				DropDB(const char * db_name, std::string & sql);
+	int					InitMeta();
+	int					CheckMsgValid(const google::protobuf::Descriptor * msg_desc, bool root = true, bool flatmode = false);
+	int					CreateTables(const char * msg_type, std::string & sql, int idx = -1);
+	int					CreateFlatTables(const char * msg_type, std::string & sql, int idx = -1);
+
+	int					CreateDB(const char * db_name, std::string & sql);
+	int					DropDB(const char * db_name, std::string & sql);
 	//todo
 	int					AlterTables(std::map<std::string, std::string> old_fields_type, std::string & sql);
 	EXTProtoMeta &		GetProtoMeta() { return protometa; }
 
-	int					GetMsgBufferFromMySQLRow(char * buffer, int * buffer_len, const MySQLRow &  row);
-	int					GetMsgFromMySQLRow(google::protobuf::Message & msg, const MySQLRow &  row);
+	//top layer unfold
+	int					GetMsgBufferFromSQLRow(char * buffer, int * buffer_len, const MySQLRow &  row);
+	int					GetMsgFromSQLRow(google::protobuf::Message & msg, const MySQLRow &  row);
+	//totally unfold
+	int					GetMsgBufferFromFlatSQLRow(char * buffer, int * buffer_len, const MySQLRow &  row);
+	int					GetMsgFromFlatSQLRow(google::protobuf::Message & msg, const MySQLRow &  row);
 
+
+
+
+	//---------------------------------------------------------------------------------------------
+public:
+	//for msg mysql meta
+	std::string		GetMsgFieldValue(const google::protobuf::Message & msg, const char * key);
+	//top layer unfold msg
+	int				GetMsgSQLKVList(const google::protobuf::Message & msg,
+		std::vector<std::pair<std::string, std::string> > & values,
+		bool readmode = true);
+
+	//unfload all to basic mysql type (no blob)
+	int				GetMsgSQLFlatKVList(const google::protobuf::Message & msg,
+		std::vector<std::pair<std::string, std::string> > & values,
+		const std::string & prefix);
+
+	std::string		GetTableName(const char * msg_type, int idx = -1);
+
+private:
+	static	std::string		GetRepeatedFieldLengthName(const std::string & name);
+	static	std::string		GetRepeatedFieldName(const std::string & name, int idx);
+	static  bool			IsRepeatedFieldLength(const std::string & field_name,
+		const std::string & key);
+	static	int				GetRepeatedFieldIdx(const std::string & field_name,
+		const std::string & key);
+
+private:
+	int				GetMsgSQLFlatKVRepeated(const google::protobuf::Message & msg,
+		const google::protobuf::Reflection * pReflection,
+		const google::protobuf::FieldDescriptor * pField, int idx,
+		std::vector<std::pair<std::string, std::string> > & values,
+		const std::string & prefix);
+
+	int				SetMsgSQLFlatKVList(google::protobuf::Message & msg, const MySQLRow &  row);
+	int				SetMsgSQLFlatKV(google::protobuf::Message & msg, const std::string & key,
+		const char * value, size_t value_length);
+	int				SetMsgSQLFlatKVRepeated(google::protobuf::Message & msg,
+		const google::protobuf::Reflection * pReflection,
+		const google::protobuf::FieldDescriptor * pField, int idx,
+		const std::string & key, const char * value, size_t value_length);
+	//---------------------------------------------------------------------
+	int				GetMsgSQLKV(const google::protobuf::Message & msg,
+		const google::protobuf::FieldDescriptor * pField,
+		std::pair<std::string, std::string> & kv);
+
+	std::string		GetMsgTypeNameFromTableName(const std::string & table_name);
+
+	int				SetMsgFieldMySQLValue(google::protobuf::Message & msg, const std::string & key,
+		const char * value, size_t value_length);
+
+	int				GetMsgFlatTableSQLFields(const google::protobuf::Descriptor * msg_desc,
+		std::string & sql,
+		const std::string & prefix);
 };

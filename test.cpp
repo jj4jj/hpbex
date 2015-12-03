@@ -48,7 +48,7 @@ int main(){
 
 	Hello hello;
 	MySQLMsgCvt	msc("test.proto", nullptr);
-	int iret = msc.InitSchema();
+	int iret = msc.InitMeta();
 	if (iret){
 		cerr << "init schama error ! ret:" << iret << endl;
 		cerr << error_stream.str() << endl;
@@ -79,6 +79,11 @@ int main(){
 	}
 	int buffer_len = dhello.ByteSize();
 	//cout << "origin bytes:" << dhello.ByteSize() << "buffer:" << buffer_db << endl;
+	if (msc.CheckMsgValid(msc.GetProtoMeta().GetMsgDesc("DBHello"))){
+		cerr << "verify msg desc error " << endl;
+		return -3;
+	}
+
 	Message * pMsg = msc.GetProtoMeta().NewDynMessage("DBHello", buffer_db, buffer_len);
 	if (hellogen.AttachMsg(pMsg)){
 		cerr << "init meta error ! ret:" << iret << endl;
@@ -145,7 +150,7 @@ int main(){
 			msr.table_name = row.table_name;
 			MySQLMsgCvt * pmsc = (MySQLMsgCvt*)ud;
 			int msglen = 128;
-			pmsc->GetMsgBufferFromMySQLRow(buffer, &msglen, msr);
+			pmsc->GetMsgBufferFromSQLRow(buffer, &msglen, msr);
 			cout << "get msg buffer froom mysql row buffer len:" << msglen << endl;
 			DBHello parse_hello;
 			if (!parse_hello.ParseFromArray(buffer, msglen)){
