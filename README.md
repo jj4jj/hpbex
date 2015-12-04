@@ -37,7 +37,7 @@ be short for "Header Protobuf Extensions"
 	make test 			#or excute: ./hpbex test.proto Hello
     make eg             #run the example 
     make mcl            #clone the dcagent to uplayer and build it 
-    ./test              #test mysql generateor
+    ./test              #test mysql generateor, test -h show the usage
 
 ###test mysql generate demo###
 ####create table in flatmode####
