@@ -39,15 +39,27 @@ be short for "Header Protobuf Extensions"
     make mcl            #clone the dcagent to uplayer and build it 
     ./test              #test mysql generateor
 
+###test mysql generate demo###
+####create table in flatmode####
+![mysql_create_table][4]
+####mysql sql####
+![mysql_sql][5]
+####mysql top layer unfold sql####
+![mysql_toplayer][6]
+
 ##tips
 - don't support the proto mutlti-level unfold a mysql table schema ;
 - just unfold 1 level , don't support the repeate filed in 1st level;
 - not process the PROGRAMMING key words collision yet (var name and struct name).
 
 ##index
-- [1] refer to google protobuf developers document , extend , custom options .
-- [2] extend the protobuf MessageOptions / FieldOptions etc ...
-- [3] top 1 level unfolding .
+[1]: refer to google protobuf developers document , extend , custom options .
+[2]: extend the protobuf MessageOptions / FieldOptions etc ...
+[3]: top 1 level unfolding .
+[4]: https://github.com/jj4jj/hpbex/blob/master/mysql_create_table.png
+[5]: https://github.com/jj4jj/hpbex/blob/master/mysql_sql.png
+[6]: https://github.com/jj4jj/hpbex/blob/master/mysql_toplayer.png
+
 
 
 
