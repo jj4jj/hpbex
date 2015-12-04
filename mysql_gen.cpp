@@ -568,7 +568,8 @@ int		MySQLMsgCvt::GetMsgSQLKVList(const google::protobuf::Message & msg, std::ve
 	for (int i = 0; i < msg_desc->field_count(); ++i)
 	{
 		const FieldDescriptor * pField = msg_desc->field(i);
-		if (!msg.GetReflection()->HasField(msg, pField)){
+		if (!pField->is_repeated() &&
+			!msg.GetReflection()->HasField(msg, pField)){
 			continue;
 		}
 		std::pair<std::string, std::string> kv;
@@ -594,14 +595,16 @@ int		MySQLMsgCvt::CheckMsgValid(const google::protobuf::Descriptor * msg_desc, b
 		cerr << "error parse from desc " << endl;
 		return -1;
 	}
-	if (meta.pks_name.empty()){
-		//not found the pk def
-		cerr << "not found the pk def " << endl;
-		return -2;
-	}
-	if (meta.pks_name.size() != meta.pks_fields.size()){
-		cerr << "meta pks size not match " << endl;
-		return -3;
+	if (root){
+		if (meta.pks_name.empty()){
+			//not found the pk def
+			cerr << "not found the pk def " << endl;
+			return -2;
+		}
+		if (meta.pks_name.size() != meta.pks_fields.size()){
+			cerr << "meta pks size not match " << endl;
+			return -3;
+		}
 	}
 	//check field type
 	for (auto & sfm : meta.sub_fields){
@@ -895,7 +898,7 @@ int			MySQLMsgCvt::GetMsgBufferFromSQLRow(char * buffer, int * buffer_len, const
 		goto FAIL_CONV;
 	}
 	if (*buffer_len < pMsg->ByteSize()){
-		cerr << "the buffer length is too few for byte size:" << pMsg->ByteSize() << endl;
+		cerr << "the buffer length: " << *buffer_len <<  " is too few for object pack byte size:" << pMsg->ByteSize() << endl;
 		ret = -1000;
 		goto FAIL_CONV;
 	}
@@ -974,7 +977,8 @@ int		MySQLMsgCvt::GetMsgSQLFlatKVList(const google::protobuf::Message & msg, std
 	const Reflection * pReflection = msg.GetReflection();
 	for (int i = 0; i < msg_desc->field_count(); ++i){
 		const FieldDescriptor * pField = msg_desc->field(i);
-		if (!pReflection->HasField(msg, pField)){
+		if (!pField->is_repeated() &&
+			!pReflection->HasField(msg, pField)){
 			continue;
 		}
 		std::pair<std::string, std::string> kv;
@@ -1204,7 +1208,7 @@ int		MySQLMsgCvt::SetMsgSQLFlatKV(google::protobuf::Message & msg, const std::st
 		}
 		pField = msg_desc->FindFieldByName(field_name);
 		if (!pField){
-			cerr << "not found the mysql field :" << key << " token 1st:" << field_name << " in msg:" << msg.GetTypeName() << endl;
+			cerr << "not found the mysql field :" << key << " token 1st(field name):" << field_name << " in msg:" << msg.GetTypeName() << endl;
 			return -2;
 		}
 		//-----------------------------------------------------------------------------------------------------------------------
@@ -1218,6 +1222,9 @@ int		MySQLMsgCvt::SetMsgSQLFlatKV(google::protobuf::Message & msg, const std::st
 			//must be indx
 			int rep_idx = stoi(rep_idx_str);
 			if (rep_idx >= 0){
+				//$idx$v
+				field_pos = key.find(TABLE_REPEATED_FIELD_POSTFIX, field_pos);
+				field_pos += strlen(TABLE_REPEATED_FIELD_POSTFIX);
 				//msg_set(k,v,idx)
 				return SetMsgSQLFlatKVRepeated(msg, pReflection, pField, rep_idx, key.substr(field_pos), value, value_length);
 			}

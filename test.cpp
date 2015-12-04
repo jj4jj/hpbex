@@ -46,6 +46,11 @@ int main(int argc, char ** argv){
 	clog << error_stream.str() << endl;
 	error_stream.clear();
 #endif
+	cmdline_opt_t	cmdopt(argc, &argv[0]);
+	cmdopt.parse("flatmode:n::generate mysql sql in flat mode;:r:u:mysql user name;:r:p:mysql password");
+	bool flatmode = cmdopt.getoptstr("flatmode") ? true : false;
+
+
 
 	Hello hello;
 	MySQLMsgCvt	msc("test.proto", nullptr);
@@ -80,7 +85,8 @@ int main(int argc, char ** argv){
 	}
 	int buffer_len = dhello.ByteSize();
 	//cout << "origin bytes:" << dhello.ByteSize() << "buffer:" << buffer_db << endl;
-	if (msc.CheckMsgValid(msc.GetProtoMeta().GetMsgDesc("DBHello"))){
+	cout << "flatmode:" << flatmode << endl;
+	if (msc.CheckMsgValid(msc.GetProtoMeta().GetMsgDesc("DBHello"),true, flatmode)){
 		cerr << "verify msg desc error " << endl;
 		return -3;
 	}
@@ -101,13 +107,17 @@ int main(int argc, char ** argv){
 	cout << "===============================================" << endl;
 
 	///////////////////////////////////////////////////////////////////////////////
+	if (!cmdopt.getoptstr("u") || !cmdopt.getoptstr("p")){
+		cmdopt.pusage();
+		return -1;
+	}
 	global_logger_init(logger_config_t());
 	using namespace dcsutil;
 	mysqlclient_t	mc;
 	mysqlclient_t::cnnx_conf_t	conf;
 	conf.ip = "127.0.0.1";
-	conf.uname = "test";
-	conf.passwd = "123456";
+	conf.uname = cmdopt.getoptstr("u");
+	conf.passwd = cmdopt.getoptstr("p");
 	conf.port = 3306;
 	if (mc.init(conf)){
 		LOGP("mysql init error !");
@@ -116,9 +126,6 @@ int main(int argc, char ** argv){
 	mc.execute("use test;");
 
 	///////////////////////////////////////////////////////////////////////
-	cmdline_opt_t	cmdopt(argc, &argv[0]);
-	cmdopt.parse("flatmode:n::generate mysql sql in flat mode");
-	bool flatmode = cmdopt.getoptstr("flatmode") ? true : false;
 
 	string sql;
 	msc.CreateDB("test_msc", sql);
@@ -149,7 +156,6 @@ int main(int argc, char ** argv){
 		static void 	cb(void* ud, INOUT bool & need_more, const dcsutil::mysqlclient_t::table_row_t & row){
 			LOGP("cb ud:%p row:%s (%zu) name:%s total:%zu offset:%zu! more:%d",
 				ud, row.row_data[0], row.row_length[0], row.fields_name[0], row.row_total, row.row_offset, need_more);
-			static char buffer[128];
 			MySQLRow msr;
 			msr.row_data = row.row_data;
 			msr.row_lengths = row.row_length;
@@ -157,9 +163,10 @@ int main(int argc, char ** argv){
 			msr.fields_name = row.fields_name;
 			msr.table_name = row.table_name;
 			param_t * pmsc = (param_t*)ud;
-			int msglen = 128;
+			static char buffer[260];
+			int msglen = sizeof(buffer);
 			pmsc->cvt->GetMsgBufferFromSQLRow(buffer, &msglen, msr, pmsc->flatmode);
-			cout << "get msg buffer froom mysql row buffer len:" << msglen << endl;
+			cout << "get msg buffer from mysql row buffer len:" << msglen << endl;
 			DBHello parse_hello;
 			if (!parse_hello.ParseFromArray(buffer, msglen)){
 				cout << "unpack error !" << endl;
