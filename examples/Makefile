@@ -22,4 +22,12 @@ ext: proto/test.proto proto/extensions.proto ../hpbex
 sql: ext
 	g++ sql/test.cpp ../ext_meta.cpp ../mysql_gen.cpp ../extensions_option.cpp proto/extensions.pb.cc proto/test.pb.cc -I.. -Iproto -o test_sql ${PROTOBUF_INC} -std=c++11 -g -Wall ${PROTOBUF_LIB} -lmysqlclient -Ldcagent/lib -ldcbase -ldcutil -Idcagent
 
+clean:
+	rm -f proto/*.pb.cc
+	rm -f proto/*.pb.h
+	rm -f cpp/*.hpb.h
+	rm -f sql/*.hpb.h
+	rm -f test_cpp
+	rm -f test_sql
+
 
