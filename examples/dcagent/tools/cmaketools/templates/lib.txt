@@ -1,0 +1,19 @@
+
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} cur_aSRCS)
+set(cur_SRCS "${cur_aSRCS}")
+
+<extra_srcs>
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}
+${PROJECT_SOURCE_DIR}
+/usr/include
+<includes>)
+
+add_library(<lib_name> <lib_type> ${cur_SRCS})
+
+link_directories(<linkpaths>
+/usr/local/lib)
+
+target_link_libraries(<lib_name>
+<linklibs>)
+

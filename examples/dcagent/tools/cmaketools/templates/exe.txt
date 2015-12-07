@@ -1,0 +1,28 @@
+#projects genearte by cmaketools
+#file(GLOB_RECURSE cur_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp *.c *.cc *.hpp)
+#file(GLOB cur_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp *.c *.cc *.hpp)
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} cur_aSRCS)
+set(cur_SRCS "${cur_aSRCS}")
+<extra_srcs>
+
+#base dir depend on itself and some otherlib
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}
+${PROJECT_SOURCE_DIR}
+<includes>)
+
+#base dir linked lib dir
+link_directories(
+<linkpaths>
+/usr/local/lib
+${PROJECT_SOURCE_DIR}/lib)
+
+#it will generate a exe
+
+ADD_EXECUTABLE(<exe_name> ${cur_SRCS})
+
+#assign custrom link lib
+target_link_libraries(<exe_name>
+<linklibs>)
+
+#installing
+INSTALL(TARGETS <exe_name> DESTINATION bin/)

@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../../lib/libdcutil.a  CMakeFiles/dcutil.dir/util_mysql.cpp.o CMakeFiles/dcutil.dir/util_proto.cpp.o
+/usr/bin/ranlib ../../lib/libdcutil.a

@@ -73,7 +73,11 @@ int	    EXTFieldMeta::AttachDesc(const FieldDescriptor * desc){
 	return 0;
 }
 string EXTFieldMeta::GetScalarTypeName(){
-	static const char * s_var_type_names[] = { "", "int32_t", "uint32_t", "int64_t", "uint64_t", "double", "float", "const char *", "int32_t", "Message" };
+	static const char * s_var_type_names[] = { "",
+		"int32_t", "int64_t", "uint32_t",
+		"uint64_t", "double", "float",
+		"bool", "invalidate type(enum)", "invalidate type(const char *)",
+		"invalidate type(message)","" };
 	const char * pszTypeName = s_var_type_names[field_desc->cpp_type()];
 	if (field_desc->cpp_type() == FieldDescriptor::CPPTYPE_ENUM){
 		return field_desc->enum_type()->name();

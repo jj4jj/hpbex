@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../../lib/libdcbase.a  CMakeFiles/dcbase.dir/logger.cpp.o CMakeFiles/dcbase.dir/dcsmq.cpp.o CMakeFiles/dcbase.dir/cmdline_opt.cpp.o CMakeFiles/dcbase.dir/profile.cpp.o CMakeFiles/dcbase.dir/dcutils.cpp.o CMakeFiles/dcbase.dir/dcshm.cpp.o CMakeFiles/dcbase.dir/dctcp.cpp.o
+/usr/bin/ranlib ../../lib/libdcbase.a
