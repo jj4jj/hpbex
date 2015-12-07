@@ -53,6 +53,8 @@ int main(int argc, char ** argv){
 
 
 	Hello hello;
+    Hello_ST hellost;
+    hellost.construct();
 	MySQLMsgCvt	msc("test.proto", nullptr);
 	int iret = msc.InitMeta();
 	if (iret){

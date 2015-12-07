@@ -168,6 +168,17 @@ public:
 				else if (sfm.field_desc->type() == FieldDescriptor::TYPE_BYTES){
 					WRITE_LINE("%s.length = 0U;", st_var_name.c_str());
 				}
+				else if (sfm.field_desc->type() == FieldDescriptor::TYPE_ENUM){
+					WRITE_LINE("%s = %s;//should be 0", st_var_name.c_str(),
+						sfm.field_desc->default_value_enum()->name().c_str());
+					if (sfm.field_desc->default_value_enum()->number() != 0){
+						WRITE_LINE("#warning \"enum type:%s default value should be 0 value define but %s != 0 \"",
+							sfm.field_desc->default_value_enum()->type()->name().c_str(),
+							sfm.field_desc->default_value_enum()->name().c_str());
+						WRITE_LINE("assert( \"enum default value should be 0 value define !\" && %s == 0 );",
+							sfm.field_desc->default_value_enum()->name().c_str());
+					}
+				}
 				else if (sfm.field_desc->cpp_type() == FieldDescriptor::CPPTYPE_MESSAGE){
 					WRITE_LINE("%s.construct();", st_var_name.c_str());
 				}
@@ -438,7 +449,7 @@ public:
 				WRITE_LINE("int\t\tinsert_%s(size_t idx_, const %s & entry_, bool shift_force_insert_ = false) {",
 					sfm.GetVarName().c_str(), sfm.GetScalarTypeName().c_str());
 				++level;
-				WRITE_LINE("if ( idx_ < 0 || idx_ >= %s || idx_ > %s.count ) { return -2; }",
+				WRITE_LINE("if ( idx_ >= %s || idx_ > %s.count ) { return -2; }",
 					sfm.f_count.c_str(), sfm.GetVarName().c_str());
 				WRITE_LINE("if ( %s.count < %s ) {", sfm.GetVarName().c_str(), sfm.f_count.c_str());
 				++level;

@@ -31,9 +31,11 @@ message Hello {
     //repeated int32 roleids = 3[(f_count)="32"];
     optional HelloD d = 4;
     //repeated HelloD rd = 5[(f_count)="32"];
+    optional EnumDef_value   ev = 10;
 }
 
 enum EnumDef_value {
+    EN_DEFAULT_VALUE = 0;//v
 	MAX_NAME_LENGTH = 1;//length
 	MAX_DB_SPLIT_NUM = 100;
 	MAX_BUFF_NUM = 1048576;
@@ -56,4 +58,5 @@ message DBHello {
 	optional bytes bytesmsg = 7[(f_length)="MAX_BUFF_NUM"];
     repeated uint32 repeat_test = 8[(f_count)="32"];
     repeated Award repeat_msg = 9[(f_count)="5"];
+    optional EnumDef_value   ev = 10;
 }

@@ -6,7 +6,7 @@ hpbex: main.cpp ext_meta.cpp extensions_option.cpp extensions.pb.cc flatmsg_gen.
 extensions.pb.cc: extensions.proto
 	protoc extensions.proto -I. ${PROTOBUF_INC} --cpp_out=.
 test: hpbex
-	./hpbex test.proto Hello
+	./hpbex test.proto Hello -o test.hpb.h
 src: test.proto hpbex
 	./hpbex test.proto Hello > test.hpb.h
 clean:
