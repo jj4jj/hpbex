@@ -9,7 +9,8 @@ extensions.pb.h extensions.pb.cc: extensions.proto
 test: hpbex
 	./hpbex test.proto Hello -I examples/proto/  -o test.hpb.h
 ex:
-	cd examples && make
+	cd examples && make cpp
+	cd examples && make sql
 clean:
 	rm -f hpbex
 	rm -f *.pb.cc *.hpb.h
