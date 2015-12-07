@@ -8,6 +8,7 @@ extensions.pb.h extensions.pb.cc: extensions.proto
 	${PROTOC} extensions.proto -I. ${PROTOBUF_INC} --cpp_out=.
 test: hpbex
 	./hpbex test.proto Hello -I examples/proto/  -o test.hpb.h
+	cat test.hpb.h
 ex:
 	cd examples && make cpp
 	cd examples && make sql

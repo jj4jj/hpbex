@@ -35,9 +35,10 @@ be short for "Header Protobuf Extensions"
 	install libprotobuf-dev (2.6.1)
 	make				#for generating hpbex program
 	make test 			#or excute: ./hpbex test.proto Hello
-    make eg             #run the example 
-    make mcl            #clone the dcagent to uplayer and build it 
-    ./test              #test mysql generateor, test -h show the usage
+    make ex             #make the examples 
+    cd examples         #clone the dcagent to uplayer and build it 
+    ./test_sql          #test mysql generateor, -h show the usage
+    ./test_cpp          #test cpp pod struct generateor, -h show the usage
 
 ###test mysql generate demo###
 ####create table in flatmode####
