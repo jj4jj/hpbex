@@ -20,6 +20,7 @@ ext: proto/test.proto proto/extensions.proto ../hpbex
 	../hpbex test.proto DBHello -o sql/test.hpb.h -Iproto
 
 sql: ext
+	cd dcagent && make
 	g++ sql/test.cpp ../ext_meta.cpp ../mysql_gen.cpp ../extensions_option.cpp proto/extensions.pb.cc proto/test.pb.cc -I.. -Iproto -o test_sql ${PROTOBUF_INC} -std=c++11 -g -Wall ${PROTOBUF_LIB} -lmysqlclient -Ldcagent/lib -ldcbase -ldcutil -Idcagent
 
 clean:
