@@ -24,6 +24,7 @@ public:
 	int				Insert(std::string & sql , bool flatmode = false);
 	int				CreateTable(std::string & sql, bool flatmode = false);
 	int				DropTable(std::string & sql);
+    int             Count(std::string & sql);
 
 };
 
@@ -36,17 +37,19 @@ struct MySQLRow {
 	unsigned long *				row_lengths;
 };
 
+
 class MySQLMsgCvt {
 	std::string			meta_file;
 	st_mysql *			mysql;
 	std::string			field_buffer;
 	std::string			escaped_buffer;
+    std::string         package_name;
 	EXTProtoMeta		protometa; //dynloading
 public:
 	MySQLMsgCvt(const std::string & file, st_mysql * pMysql, size_t MAX_FIELD_BUFFER = 1024 * 1024);
 
 public:
-	int					InitMeta();
+    int					InitMeta(int n = 0, const char ** path = nullptr);
 	int					CheckMsgValid(const google::protobuf::Descriptor * msg_desc, bool root = true, bool flatmode = false);
 	int					CreateTables(const char * msg_type, std::string & sql, int idx = -1);
 	int					CreateFlatTables(const char * msg_type, std::string & sql, int idx = -1);
@@ -59,7 +62,7 @@ public:
 
 	//top layer unfold
 	int					GetMsgBufferFromSQLRow(char * buffer, int * buffer_len, const MySQLRow &  row, bool faltmode = false);
-	int					GetMsgFromSQLRow(google::protobuf::Message & msg, const MySQLRow &  row, bool faltmode = false);
+    int					GetMsgFromSQLRow(google::protobuf::Message & msg, const MySQLRow &  row, bool faltmode = false);
 	//---------------------------------------------------------------------------------------------
 public:
 	//for msg mysql meta

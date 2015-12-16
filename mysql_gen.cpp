@@ -640,17 +640,18 @@ int		MySQLMsgCvt::CheckMsgValid(const google::protobuf::Descriptor * msg_desc, b
 	}
 	return 0;
 }
-
-int		MySQLMsgCvt::InitMeta(){
-	if (protometa.Init(nullptr)){
+int		MySQLMsgCvt::InitMeta(int n , const char ** path ){
+    if (protometa.Init(path, n)){
 		error_stream << "proto meta init error !" << endl;
 		return -1;
 	}
-	if (!protometa.LoadFile(meta_file.c_str())){
+    auto filedesc = protometa.LoadFile(meta_file.c_str());
+    if (!filedesc){
 		error_stream << "proto meta load error !" << endl;
 		return -2;
 	}
-	return 0;
+    package_name = filedesc->package();
+    return 0;
 }
 #define TABLE_NAME_POSTFIX		("_")
 #define TABLE_REPEATED_FIELD_POSTFIX	("$")
@@ -794,7 +795,12 @@ int			MySQLMsgCvt::CreateFlatTables(const char * msg_type, std::string & sql, in
 }
 
 int			MySQLMsgCvt::CreateTables(const char * msg_type, std::string & sql,int idx ){
-	auto msg_desc = protometa.GetMsgDesc(msg_type);
+    string msg_type_name = msg_type;
+    if (!package_name.empty()){
+        msg_type_name = package_name + ".";
+        msg_type_name += msg_type;
+    }
+    auto msg_desc = protometa.GetMsgDesc(msg_type_name.c_str());
 	if (!msg_desc){
 		return -1;
 	}
@@ -887,7 +893,7 @@ int			MySQLMsgCvt::GetMsgFromSQLRow(google::protobuf::Message & msg, const MySQL
 }
 int			MySQLMsgCvt::GetMsgBufferFromSQLRow(char * buffer, int * buffer_len, const MySQLRow &  sql_row, bool flatmode){
 	std::string msg_type_name = GetMsgTypeNameFromTableName(sql_row.table_name);
-	Message * pMsg = protometa.NewDynMessage(msg_type_name.c_str());
+    Message * pMsg = protometa.NewDynMessage(msg_type_name.c_str());
 	if (!pMsg){
 		cerr << "not found message for table name:" << msg_type_name << endl;
 		return -1;
