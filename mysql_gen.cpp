@@ -549,9 +549,10 @@ int		MySQLMsgCvt::GetMsgSQLKV(const google::protobuf::Message & msg, const Field
 	}
 	assert(buffer_len != 0);
 	//need escape
-	if (mysql && need_escape && buffer_len > 2){
+	if (need_escape && buffer_len > 2){
 		bzero((char*)escaped_buffer.data() + buffer_len,
 			buffer_len + 1); //
+		*(char*)escaped_buffer.data() = '\'';
 		mysql_real_escape_string(mysql, (char*)&escaped_buffer[1], (char*)field_buffer.data() + 1, buffer_len - 2);
 		kv.second.assign(escaped_buffer.data());
 		kv.second.append("'");
