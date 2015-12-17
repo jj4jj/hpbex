@@ -107,7 +107,7 @@ class EXTProtoMeta {
 public:
 	EXTProtoMeta();
 	~EXTProtoMeta();
-	int		Init(const char ** paths,int n = 0); 
+    int		Init(const char ** paths, int n = 0, const char ** otherfiles = nullptr, int m = 0);
 	const google::protobuf::FileDescriptor * LoadFile(const char * file);
 	const google::protobuf::DescriptorPool * GetPool();
 	const google::protobuf::Descriptor *	 GetMsgDesc(const char * msg_type);

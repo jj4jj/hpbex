@@ -357,16 +357,19 @@ EXTProtoMeta::~EXTProtoMeta(){
 		delete dyn_msg_factory;
 	}
 }
-int		EXTProtoMeta::Init(const char * * path, int n){
+int		EXTProtoMeta::Init(const char * * path, int n, const char ** otherfiles , int m ){
 	if (importer){
 		return -1;
 	}
-	while (path && n--){
+	while (path && n-- > 0){
 		dst->MapPath("", path[n]);
 		//std::clog << "add path:" << path[n] << endl;
 	}
 	ProtoMetaErrorCollector mfec;
 	importer = new google::protobuf::compiler::Importer(dst, &mfec);
+    while (otherfiles && m-- > 0){
+        importer->AddUnusedImportTrackFile(otherfiles[m]);
+    }
 	return 0;
 }
 const google::protobuf::FileDescriptor * EXTProtoMeta::LoadFile(const char * file){

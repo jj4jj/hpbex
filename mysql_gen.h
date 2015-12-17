@@ -49,7 +49,7 @@ public:
 	MySQLMsgCvt(const std::string & file, st_mysql * pMysql, size_t MAX_FIELD_BUFFER = 1024 * 1024);
 
 public:
-    int					InitMeta(int n = 0, const char ** path = nullptr);
+    int					InitMeta(int n = 0, const char ** path = nullptr, int m = 0, const char ** otherfiles = nullptr);
 	int					CheckMsgValid(const google::protobuf::Descriptor * msg_desc, bool root = true, bool flatmode = false);
 	int					CreateTables(const char * msg_type, std::string & sql, int idx = -1);
 	int					CreateFlatTables(const char * msg_type, std::string & sql, int idx = -1);

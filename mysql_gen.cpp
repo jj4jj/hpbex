@@ -640,8 +640,8 @@ int		MySQLMsgCvt::CheckMsgValid(const google::protobuf::Descriptor * msg_desc, b
 	}
 	return 0;
 }
-int		MySQLMsgCvt::InitMeta(int n , const char ** path ){
-    if (protometa.Init(path, n)){
+int		MySQLMsgCvt::InitMeta(int n , const char ** path, int m , const char ** otherfiles  ){
+    if (protometa.Init(path, n, otherfiles, m)){
 		error_stream << "proto meta init error !" << endl;
 		return -1;
 	}
