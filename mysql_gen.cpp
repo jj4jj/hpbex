@@ -542,6 +542,7 @@ int		MySQLMsgCvt::GetMsgSQLKV(const google::protobuf::Message & msg, const Field
 			*((char*)field_buffer.data() + 1) = '\'';
 			buffer_len = 2;
 		}
+        break;
 	default:
 		cerr << "unkown type ! field:" << pField->name() << " type: " << pField->cpp_type() << endl;
 		return -2;
