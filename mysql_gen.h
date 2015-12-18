@@ -40,13 +40,13 @@ struct MySQLRow {
 
 class MySQLMsgCvt {
 	std::string			meta_file;
-	st_mysql *			mysql;
+	void *			    mysql;
 	std::string			field_buffer;
 	std::string			escaped_buffer;
     std::string         package_name;
 	EXTProtoMeta		protometa; //dynloading
 public:
-	MySQLMsgCvt(const std::string & file, st_mysql * pMysql, size_t MAX_FIELD_BUFFER = 1024 * 1024);
+	MySQLMsgCvt(const std::string & file, void * mysqlconn, size_t MAX_FIELD_BUFFER = 1024 * 1024);
 
 public:
     int					InitMeta(int n = 0, const char ** path = nullptr, int m = 0, const char ** otherfiles = nullptr);
@@ -63,7 +63,8 @@ public:
 	//top layer unfold
 	int					GetMsgBufferFromSQLRow(char * buffer, int * buffer_len, const MySQLRow &  row, bool faltmode = false);
     int					GetMsgFromSQLRow(google::protobuf::Message & msg, const MySQLRow &  row, bool faltmode = false);
-	//---------------------------------------------------------------------------------------------
+    int                 escape_string(std::string & result, const char * data, int datalen);
+    //---------------------------------------------------------------------------------------------
 public:
 	//for msg mysql meta
 	std::string		GetMsgFieldValue(const google::protobuf::Message & msg, const char * key);
