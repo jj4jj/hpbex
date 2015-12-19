@@ -604,6 +604,8 @@ int		MySQLMsgCvt::GetMsgSQLKVList(const google::protobuf::Message & msg, std::ve
 	}
 	return 0;
 }
+#define TABLE_NAME_POSTFIX		("_")
+#define TABLE_REPEATED_FIELD_POSTFIX	("$")
 int		MySQLMsgCvt::CheckMsgValid(const google::protobuf::Descriptor * msg_desc, bool root, bool flatmode ){
 	EXTMessageMeta meta;
 	if (meta.AttachDesc(msg_desc)){
@@ -612,6 +614,11 @@ int		MySQLMsgCvt::CheckMsgValid(const google::protobuf::Descriptor * msg_desc, b
 		return -1;
 	}
 	if (root){
+		if (msg_desc->full_name().find(TABLE_NAME_POSTFIX) != string::npos){
+			cerr << "forbidan the db msg type name include :" << TABLE_NAME_POSTFIX << " type:" <<
+				msg_desc->full_name() << endl;
+			return -2;
+		}
 		if (meta.pks_name.empty()){
 			//not found the pk def
 			cerr << "not found the pk def " << endl;
@@ -669,8 +676,6 @@ int		MySQLMsgCvt::InitMeta(int n , const char ** path, int m , const char ** oth
     package_name = filedesc->package();
     return 0;
 }
-#define TABLE_NAME_POSTFIX		("_")
-#define TABLE_REPEATED_FIELD_POSTFIX	("$")
 std::string		MySQLMsgCvt::GetMsgTypeNameFromTableName(const std::string & table_name){
 	string::size_type deli = table_name.find_last_of(TABLE_NAME_POSTFIX);
 	string msg_type_name;
