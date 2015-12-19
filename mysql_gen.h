@@ -17,14 +17,15 @@ private:
 public:
 	std::string		GetTableName();
 	int32_t			GetTableIdx();
-	int				Select(std::string & sql, std::vector<std::string> * fields = nullptr, const char * where_ = nullptr, bool flatmode = false);
+	int				Select(std::string & sql, std::vector<std::string> * fields = nullptr, const char * where_ = nullptr,
+							int offset = 0, int limit = 0, const char * orderby = nullptr, int order = 1, bool flatmode = false);
 	int				Delete(std::string & sql, const char * where_ = nullptr, bool flatmode = false);
 	int				Replace(std::string & sql , bool flatmode = false);
 	int				Update(std::string & sql , bool flatmode = false);
 	int				Insert(std::string & sql , bool flatmode = false);
 	int				CreateTable(std::string & sql, bool flatmode = false);
 	int				DropTable(std::string & sql);
-    int             Count(std::string & sql);
+    int             Count(std::string & sql, const char * where_ = nullptr);
 
 };
 

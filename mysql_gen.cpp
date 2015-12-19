@@ -55,10 +55,11 @@ std::string		MySQLMsgMeta::GetTableName(){
 	}
 	return tb_name;
 }
-int				MySQLMsgMeta::Select(std::string & sql, std::vector<std::string> * fields, const char * where_, bool flatmode){
+int				MySQLMsgMeta::Select(std::string & sql, std::vector<std::string> * fields, const char * where_,
+						int offset, int limit, const char * orderby, int order, bool flatmode){
 	//
 	sql = "SELECT ";
-	if (fields){
+	if (fields && !fields->empty()){
 		for (int i = 0; i < (int)fields->size(); ++i){
 			if (i != 0){
 				sql += ",";
@@ -74,11 +75,9 @@ int				MySQLMsgMeta::Select(std::string & sql, std::vector<std::string> * fields
 	sql += " FROM `";
 	sql += GetTableName();
 	sql += "` ";
-	if (where_){
-		if (where_[0]){
-			sql += " WHERE ";
-			sql += where_;
-		}
+	if (where_ && where_[0]){
+		sql += " WHERE ";
+		sql += where_;
 	}
 	else {
 		sql += " WHERE ";
@@ -121,6 +120,23 @@ int				MySQLMsgMeta::Select(std::string & sql, std::vector<std::string> * fields
 			sql += " = ";
 			sql += kv.second;
 		}
+	}
+	//ORDER BY todo
+	if (orderby && *orderby){
+		sql += " ORDER BY ";
+		sql += orderby;
+		sql += order > 0 ? " ASC" : " DESC";
+	}
+	//LIMIT 0,100
+	//=LIMIT 100 OFFSET 0
+	if (limit < 0){
+		limit = 0;
+	}
+	sql += " LIMIT ";
+	sql += to_string(limit);
+	if (offset > 0){
+		sql += " OFFSET ";
+		sql += to_string(offset);
 	}
 	sql += ";";
 	return 0;
@@ -357,6 +373,17 @@ int		MySQLMsgMeta::Insert(std::string & sql, bool flatmode){
 	sql += ");";
 	return 0;
 }
+int     MySQLMsgMeta::Count(std::string & sql, const char * where_){
+	sql = "SELECT COUNT(*) FROM `";
+	sql += GetTableName();
+	sql += "` ";
+	if (where_ && where_[0]){
+		sql += where_;
+	}
+	sql += ";";
+	return 0;
+}
+
 int		MySQLMsgMeta::DropTable(std::string & sql){
 	sql = "DROP TABLE IF EXISTS `";
 	sql += GetTableName();
@@ -646,11 +673,16 @@ int		MySQLMsgCvt::InitMeta(int n , const char ** path, int m , const char ** oth
 #define TABLE_REPEATED_FIELD_POSTFIX	("$")
 std::string		MySQLMsgCvt::GetMsgTypeNameFromTableName(const std::string & table_name){
 	string::size_type deli = table_name.find_last_of(TABLE_NAME_POSTFIX);
+	string msg_type_name;
+	if (!package_name.empty()){
+		msg_type_name += package_name;
+		msg_type_name += ".";
+	}
 	if (deli == string::npos){
-		return table_name;
+		return msg_type_name + table_name;
 	}
 	else {
-		return table_name.substr(0, deli);
+		return msg_type_name + table_name.substr(0, deli);
 	}
 }
 string		MySQLMsgCvt::GetTableName(const char * msg_type, int idx){
@@ -876,7 +908,7 @@ int			MySQLMsgCvt::GetMsgFromSQLRow(google::protobuf::Message & msg, const MySQL
 		cerr << "errror number fields:" << sql_row.num_fields << endl;
 		return -1;
 	}
-	string msg_type = msg.GetDescriptor()->name();
+	string msg_type = msg.GetDescriptor()->full_name();
 	std::string msg_type_name = GetMsgTypeNameFromTableName(sql_row.table_name);
 	if (msg_type_name != msg_type){
 		cerr << "type not matched ! expect type:" << msg_type << endl;
