@@ -62,7 +62,7 @@ public:
 	EXTProtoMeta &		GetProtoMeta() { return protometa; }
 
 	//top layer unfold
-	int					GetMsgBufferFromSQLRow(char * buffer, int * buffer_len, const MySQLRow &  row, bool faltmode = false);
+	int					GetMsgBufferFromSQLRow(const char * full_msg_name, char * buffer, int * buffer_len, const MySQLRow &  row, bool faltmode = false);
     int					GetMsgFromSQLRow(google::protobuf::Message & msg, const MySQLRow &  row, bool faltmode = false);
     int                 escape_string(std::string & result, const char * data, int datalen);
     //---------------------------------------------------------------------------------------------

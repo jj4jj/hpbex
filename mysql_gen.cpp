@@ -908,12 +908,6 @@ int			MySQLMsgCvt::GetMsgFromSQLRow(google::protobuf::Message & msg, const MySQL
 		cerr << "errror number fields:" << sql_row.num_fields << endl;
 		return -1;
 	}
-	string msg_type = msg.GetDescriptor()->full_name();
-	std::string msg_type_name = GetMsgTypeNameFromTableName(sql_row.table_name);
-	if (msg_type_name != msg_type){
-		cerr << "type not matched ! expect type:" << msg_type << endl;
-		return -2;
-	}
 	int ret = 0;
 	if (flatmode){		
 		ret = SetMsgSQLFlatKVList(msg, sql_row);
@@ -935,16 +929,15 @@ int			MySQLMsgCvt::GetMsgFromSQLRow(google::protobuf::Message & msg, const MySQL
 	}
 	return 0;
 }
-int			MySQLMsgCvt::GetMsgBufferFromSQLRow(char * buffer, int * buffer_len, const MySQLRow &  sql_row, bool flatmode){
-	std::string msg_type_name = GetMsgTypeNameFromTableName(sql_row.table_name);
-    Message * pMsg = protometa.NewDynMessage(msg_type_name.c_str());
+int			MySQLMsgCvt::GetMsgBufferFromSQLRow(const char * full_msg_name, char * buffer, int * buffer_len, const MySQLRow &  sql_row, bool flatmode){
+	Message * pMsg = protometa.NewDynMessage(full_msg_name);
 	if (!pMsg){
-		cerr << "not found message for table name:" << msg_type_name << endl;
+		cerr << "not found message for table name:" << full_msg_name << endl;
 		return -1;
 	}
 	int ret = GetMsgFromSQLRow(*pMsg, sql_row, flatmode);
 	if (ret){
-		ret = -1 + ret;
+		ret = ret;
 		goto FAIL_CONV;
 	}
 	if (*buffer_len < pMsg->ByteSize()){
